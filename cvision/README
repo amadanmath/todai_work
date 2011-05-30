@@ -1,0 +1,346 @@
+1 Intro
+
+And stereo position and orientation, using a design taken by the camera
+images are all known parameters such as focal length, the method for
+obtaining three-dimensional shape of the object were taken. This stereo
+also known as stereoscopic vision, the same mechanism is also considered
+to be three-dimensional perception of two human eyes.
+
+In the field of computer vision, stereo long history of research has
+been extensively studied still today. The base stereo, two images
+obtained from the parallax is to estimate the depth of the object from
+the camera position by triangulation measurements. The human perception
+of depth by doing two images of two eyes, the computer can be used to
+estimate the depth of three or more images. By increasing the number of
+generally known that the accuracy of three-dimensional shape is
+restored.
+
+This article will first explain the basics of 3D reconstruction method
+using two images using a stereo. Then, a plurality of stereo (stereo
+multi-) extension to the method described.
+
+
+
+2 Construction of 3D through triangulation
+
+To explain the principle of triangulation measurement for the two
+cameras. 
+
+Here, the right to place the camera exactly the same position. The left
+camera reference camera, the camera name and see the camera on the
+right. 
+
+As a coordinate system, origin and location of the reference camera, XY
+Z is set to each of the axes as in Figure 1. Reference camera position
+(B, 0, 0), the distance between the two cameras based on the length and
+B is called. 
+
+Images obtained by cameras, the object plane in the 3 Z = f in D 2-D
+image is projected on the projection, f is called the focal length. 
+
+The image coordinates (x, y) is a two-dimensional coordinates of origin
+and the image center, is usually expressed in pixels. Image coordinates
+x, y are each three-dimensional space X, Y set to be parallel to the
+axis. 
+
+Now, in terms of dimensional space 3 (Xp, Yp, Zp) and that the two
+cameras. In this case, in images obtained by the reference camera
+position (xL, yL) are reflected in, using multiple cameras at the
+reference point (xR, yR) and one that is reflected on. However, when two
+identical cameras are arranged in parallel as in Figure 2, yL = yR's.
+These two points (xL, yL) and (xR, yR) is called the corresponding point
+pairs.
+
+As stated above the stereo and the attitude and position parameters
+(focal length f) from multiple images taken by a camera is known, is to
+restore the three-dimensional shape of the object that is reflected. In
+this case, B, f, (xL, yL), (xR, yR), using the point (Xp, Yp, Zp) will
+compute the coordinates.
+
+Triangulation of Z depth is determined from the similarity of triangles.
+Figure 3 over the state of Y 2 is a diagram viewed in the axial
+direction. Dimensional point of interest in 3 (Xp, Yp, Zp) and the
+triangle formed by the two camera positions, and because it is the
+similar triangles formed by the parallax on the image and the reference
+camera position, the following relationship: holds. 
+
+(1) 
+
+At this focal length f is used for the translation number of pixels. 
+
+Here, the points in the reference image (xL, yL) in the reference image
+is (xR, yR (= yL)) that are moving in, moving amount xR - xL called the
+disparity in the standard image, d = xR - xL represent. D disparity
+using a formula you can organize on the depth Zp, 
+
+(2) 
+
+As can be determined. The camera arrangement shown in Figure 1 must be
+xL ≥ xR, and the disparity d xR - xL because it defined, marked with a
+minus sign on the formula. 
+
+If they require depth, scaling point (Xp, Yp, Zp) is obtained for the
+following. 
+
+(3) 
+
+
+
+
+3 Search for corresponding points
+
+Looking for a pair of corresponding points from each image and the
+reference image and the base, if they get the disparity, the coordinates
+could be obtained in the three-dimensional space. 
+
+So what good is a pair of corresponding points that have asked it?
+Current research stereo, has become the biggest challenge you to ask
+precisely how closely the corresponding point in this pair. This
+document describes a simple block matching method implemented in the
+most basic. 
+
+Given a diagram like that in Figure 4. And search for corresponding
+points, the points in the image on the left side of the base uL when
+picking the corresponding reference points in this picture somewhere? Is
+to find. 
+
+In fact, the stereo base length B between the cameras, the distance from
+the camera body is assumed to be sufficiently large. Thus, "together the
+corresponding points of two images, so looking at the same point in 3D
+space images of the two should have similar points of view around the
+corresponding point" implies that assumes. According to this hypothesis,
+uL point out the basic blocks in the image with a focus on, look for a
+similar block from the reference image block, the corresponding points
+should be uR heart block. Thus, while each block out the two images,
+corresponding points can be searched to find the best match.
+Furthermore, if we are dealing with parallel stereo point correspondence
+uL is because they know that there are always the same height on the
+scan line, it may be carried out along this line search be. 
+
+To find pairs of corresponding points by the computer, it is necessary
+to evaluate numerically the degree of matching the two blocks. "Best
+Match" is the maximum evaluation value (or minimum) and that means. As a
+measure to quantify the matching degree, you mentioned three typical.
+The formula comes out I (x, y) in the image point (x, y) and luminance
+of the RGB value.
+
+
+
+SAD (Sum. of Absolute Diﬀerence)
+
+(4)
+
+SSD (Sum. of Squared Diﬀerence)
+
+(5)
+
+SSD and SAD values are calculated by the means the resemblance of the
+two smaller blocks.
+
+NCC (Nomalized Cross Correlation)
+
+(6)
+
+(7)
+
+(8)
+
+NCC is the normalized correlation coefficient, takes values between -1
+and 1, which means that the two blocks are similar to the one closer.
+The above process, a point in the image on the base uL, uR corresponding
+points in the reference image is required. Therefore, the point of all
+the pixels in the image by going to substitute the basic uL
+consecutively, all points that require basic image disparity. 
+
+This document is addressed as the simplest block matching search for
+corresponding points. However, recent studies stereo, Graph Cut and
+Belief Propagation and techniques are becoming mainstream. Also, to
+block matching and non-rectangular region matching, dynamic programming
+(DP matching) has been used many techniques such as combined.
+
+
+
+Subpixel Estimation
+
+Just as it is applied to the estimation technique has been described
+over the sub-pixel disparity d is required pixels can take only integer
+values. Restoring a parallax-only 3D shape from an integer value,
+discrete depth Z comes out with only the shape. Therefore, it is
+necessary to find the real disparity can be expressed in decimal. 
+
+Parallax method for subpixel estimation, but has been proposed several
+methods described here by a simple quadratic curve fitting. For example,
+SSAD or SSSD is used, the calculated M (xL, xR) will seek to minimize
+the disparity (see Figure 5). The block matching, the disparity is the
+smallest integer d *, and the matching indicators and M * respectively.
+In this case, d * can be approximated by a quadratic function around the
+change of index matching, sub-pixel estimation. Specifically, the first
+parallax (d * - 1) index values in (M *-) and, (d * + 1) index values in
+(M * +) is determined. Second, these three points (d * - 1, M *-), (d *,
+M *), (d * + 1, M * +) through a quadratic function y = (ad ^ 2 + bd + c
+) coefficients, respectively. Then, b is a disparity as the minimum
+index value, d = (-b / 2a) as obtained in real value. In addition, NCC
+also the case of taking maximum disparity by requiring a quadratic
+function, as well as sub-pixel can be estimated.
+
+
+
+
+4 Extension to Multi-Stereo
+
+Finally, using the fundamentals we have discussed so far describe the
+shape estimation from multiple images. This document is an example of a
+technique that shows two types of stereo multi-way extension to which
+there are many besides.
+
+
+
+4.1 Method 1 (as the intersection of the eye vector)
+
+From each of images, due to block matching, we extract the corresponding
+pair. Figure 6 shows three images at the point u0, u1, u2 are capable
+of. In this case, one eye vector 3 a0_v, a1_v, a2_v the intersection of
+the three-dimensional coordinates of the point and ask. In addition,
+each image i, i = 0, 1, 2, ... the above with the corresponding point
+(xi, yi) if the equation (3) As seen from the eye vector D 3 ai_v (xi yi
+f) ⊤ parallel to (ai_v α (xi yi f) ⊤) is. 
+
+However, if you implement this approach may intersect at one point more
+than the noises and the eye vector. Therefore, the intersection point
+method is considered as three-dimensional distance from the smallest of
+all eyes, is often used.
+
+Hint:
+
+I picture camera position taken ci_v, eye unit vector and ai1_v, ∥ ai_v ∥
+= 1. Then seek a position of (X, Y, Z) = X_v you the sum of distances
+from all eyes can be calculated as follows.
+
+(9)
+
+Where si is a scalar, the distance of the center point of each camera
+X_v this. X_v point is of three-dimensional points such that the
+smallest distance from all eyes, (9) such that the minimum (X, Y, Z) and
+si is looking good.
+
+As the easiest way is (9) Since a convex function, such variables take
+extreme value function (X, Y, Z, si) well if you choose, ∂ f / ∂ X = ∂ f
+/ ∂ Y = ∂ f / ∂ Z = ∂ f / ∂ s0 = ... = 0 is obtained as the solution.
+
+
+
+4.2 Method 2 (via the search depth for each point)
+
+Regarded as one of the standard image of images. Relative to the middle
+image in Figure 7. Some point in the reference image u1 = (x1, y1) in
+the three-dimensional space, through the eye point vector ci_v veca1
+must exist somewhere on a line parallel to. Thus, three-dimensional
+coordinates of this point, the unknown parameters t and use, (tx1 ty1
+tf) ⊤ + c1_v can be expressed as. To restore the three-dimensional
+shape, the parameter t may have asked, and will be called. 
+
+If the assumed value of t is correct, two points 3 u0, u1, u2 should
+take the match with a focus on three blocks.
+
+Thus, this approach is respect for all standard image parameters, depth
+t every set in advance the range of possible values, and take matching
+the best in this range (eg, SSD would minimize the total sum of Etc.) If
+we like a good t for a linear search. The depth parameter t, even when
+you search for discrete, described by fitting a quadratic function in
+the previous section, the depth can be estimated by a continuous
+real-valued.
+
+Hint:
+
+First, determine the appropriate range of t values, the most plausible
+to explore the range may be determined to t. Anyway point is
+one-dimensional space 3 (tx1 ty1 tf) ⊤ + c1_v assuming you can calculate
+how that is reflected in the other images in any position in this
+regard. For example, the camera 2.0 points (tx1 ty1 tf) ⊤ + c1_v c0_v
+center line passing through the camera and the plane Z = f will be
+reflected on the intersection of. However, I have observed from 0 to
+convert the camera coordinate system, a position of the image captured
+in 0 u0 = (x0, y0) If so, the appropriate scalar s is employed, because
+
+(10)
+
+holds, satisfy this point (x0, y0), and a corresponding point in image
+0.
+
+
+4.3 The Problem with Stereo
+
+In this article, we explore the corresponding points by matching block.
+Block area pattern (texture) and the absence may not know what point a
+corresponding point. In one picture where there are visible, not visible
+in other images, such as blocking (occlusion) and there is a problem,
+there would be no point for itself. In addition, if you make 3-D
+reconstruction only by simple block matching, causing the expansion
+effect is applied to the background region foreground object boundary.
+
+
+
+
+5 Challenge
+
+The three stereo input images for all three, three-dimensional shape of
+the scene being determined.
+
+
+
+5.1 Input data
+
+Middlebury data set, which includes a site evaluation of stereo
+algorithms in the field of computer vision. Researchers around the
+world, if you developed a new algorithm for stereo, using a data set on
+this site, it has become common to evaluate its performance. Here, we
+use the images in the dataset. 
+
+The image size is 584 × 466, camera, X-direction (horizontal direction)
+is placed at regular intervals. The two-dimensional coordinates on each
+image (x, y) to the origin of the image center, the center of the image
+(292, 233) and. The focal length f = 500.0 to be used. Set as a
+three-dimensional coordinate system in Figure 1, each camera position
+taken by the camera viewC (0, 0, 0) and that, x direction and arranged
+at intervals of 0.1. 
+
+viewL = (-0.1, 0, 0) ... Left viewC = (0, 0, 0) ... Center viewR = (0.1,
+0, 0) ... Right 
+
+The two methods for solving the range searching three-dimensional
+points, 2.0 ≤ Z ≤ 7.5 good level.
+
+
+
+5.2 Output Data
+
+As a default, Windows software available to keep running. By reading the
+text file as in Figure 9, 3D shape can be displayed.
+
+The software displays the "File"→"Open ..." or read the text in the
+window on the software to display text and drop it. On screen, the
+increase in tandem with the left mouse button, rotate the right button,
+which can now zoom in and center button.
+
+
+
+5.3 Submissions
+
+Report (free format), program (language free), and data recovery form
+(format specified above) shall be submitted to the three points. The
+program will allow the use of a stereo code on the Internet. In that
+case, however, that the algorithms used in the report what can give an
+explanation.
+
+
+
+
+Reference
+
+[1] National Takeshi Yasui, Nagao Satoshi Clear, "C Language
+Introduction to image processing," Akira Akira Hall, 2000.
+
+[2] http://vision.middlebury.edu/stereo/
+
+
+http://vision.middlebury.edu/mview/seitz_mview_cvpr06.pdf
