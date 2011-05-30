@@ -3,17 +3,33 @@
 #include <string.h>
 #include <math.h>
 
-#define I 3
-#define J 3
-
+// image parameters
 #define F 500.0
 #define B 0.1
 #define ZMIN 2.0
 #define ZMAX 7.5
 
+// matcher box width and height
+#ifndef IJ
+#define IJ 5
+#endif
+#ifndef I
+#define I IJ
+#endif
+#ifndef J
+#define J IJ
+#endif
+
+#ifndef MATCHER
+// matcher; possible values: sad, ssd, ncc
+#define MATCHER ncc
+#endif
+
+
+
 #define BR B
 #define BL (-B)
-
+#define MAXIJ ((2 * I + 1) * (2 * J + 1))
 
 #define RED(b, x, y) (b->data[56 + ((x + b->rowlen * (b->height1 - y)) * 3)])
 #define GRN(b, x, y) (b->data[55 + ((x + b->rowlen * (b->height1 - y)) * 3)])
@@ -97,22 +113,52 @@ inline void set_pixel(BITMAP *b, unsigned int x, unsigned int y,
   b->data[offset + 2] = bb;
 }
 
-
-
 void save_bmp(BITMAP *b, char *filename) {
   FILE *f = fopen(filename, "wb");
   fwrite(b->data, 1, 54 + b->rowlen * b->height * 3, f);
 }
 
 
-
+// matchers
 
 double sad(BITMAP *ref, BITMAP *img, int x0, int x1, int y) {
-  // TODO
+  double item, result = 0;
+  int int0, int1;
+  int i, yy, xx0, xx1;
+
+  // make sure we don't access outside the bounds
+  int tsi = MIN(I, x0);
+  int si = -MIN(tsi, x1);
+  int tei = MIN(I, img->width - x0);
+  int ei = MIN(tei, img->width - x1);
+
+  int sy = MAX(y - J, 0);
+  int ey = MIN(y + J + 1, img->height);
+  if (si >= ei || sy >= ey) return 0;
+  int size = (ei - si) * (ey - sy);
+  if (!size) return result;
+
+  // sum the value at each pixel
+  for (i = si; i < ei; i++) {
+    xx0 = x0 + i;
+    xx1 = x1 + i;
+    for (yy = sy; yy < ey; yy++) {
+      int0 = RED(ref, xx0, yy) + GRN(ref, xx0, yy) + BLU(ref, xx0, yy);
+      int1 = RED(img, xx1, yy) + GRN(img, xx1, yy) + BLU(img, xx1, yy);
+
+      // cheap ABS
+      item = int0 - int1;
+      if (item < 0) item = -item;
+
+      result += item;
+    }
+  }
+  // normalize by number of data points (for image edges)
+  return result / size;
 }
 
 double ssd(BITMAP *ref, BITMAP *img, int x0, int x1, int y) {
-  double item, result=0;
+  double result = 0;
   int r, g, b;
   int i, yy, xx0, xx1;
 
@@ -124,12 +170,9 @@ double ssd(BITMAP *ref, BITMAP *img, int x0, int x1, int y) {
 
   int sy = MAX(y - J, 0);
   int ey = MIN(y + J + 1, img->height);
-
-  if (sy < 0) sy = 0;
-  if (ey > img->height) ey = img->height;
-
-  //printf("x0:%d(%d-%d); x1:%d(%d-%d); y:%d(%d-%d) - %d, %d\n",
-      //x0, x0+si, x0+ei, x1, x1+si, x1+ei, y, sy, ey, si, ei);
+  if (si >= ei || sy >= ey) return 0;
+  int size = (ei - si) * (ey - sy);
+  if (!size) return result;
 
   // sum the value at each pixel
   for (i = si; i < ei; i++) {
@@ -139,18 +182,64 @@ double ssd(BITMAP *ref, BITMAP *img, int x0, int x1, int y) {
       r = RED(ref, xx0, yy) - RED(img, xx1, yy);
       g = GRN(ref, xx0, yy) - GRN(img, xx1, yy);
       b = BLU(ref, xx0, yy) - BLU(img, xx1, yy);
+
+      // for better matching, use each channel separately
       result += r * r + g * g + b * b;
     }
   }
-
-  // normalise so that the edges get the same treatment as everywhere
-  // else, despite less pixels being tested
-
-  return result;
+  // normalize by number of data points (for image edges)
+  return result / size;
 }
 
+// allocate helper vectors only once, instead for every pixel
+double im0[MAXIJ], im1[MAXIJ];
+
 double ncc(BITMAP *ref, BITMAP *img, int x0, int x1, int y) {
-  // TODO
+  double item, result = 0;
+  int int0, int1;
+  double int0avg = 0, int1avg = 0;
+  int i, yy, xx0, xx1;
+
+  // make sure we don't access outside the bounds
+  int tsi = MIN(I, x0);
+  int si = -MIN(tsi, x1);
+  int tei = MIN(I, img->width - x0);
+  int ei = MIN(tei, img->width - x1);
+
+  int sy = MAX(y - J, 0);
+  int ey = MIN(y + J + 1, img->height);
+  if (si >= ei || sy >= ey) return 0;
+  int size = (ei - si) * (ey - sy);
+
+  // calculate the value at each pixel and store
+  // calculate the average values
+  int c = 0;
+  for (i = si; i < ei; i++) {
+    xx0 = x0 + i;
+    xx1 = x1 + i;
+    for (yy = sy; yy < ey; yy++) {
+      int0avg += im0[c] = RED(ref, xx0, yy) + GRN(ref, xx0, yy) + BLU(ref, xx0, yy);
+      int1avg += im1[c] = RED(img, xx1, yy) + GRN(img, xx1, yy) + BLU(img, xx1, yy);
+      c++;
+    }
+  }
+  int0avg /= size;
+  int1avg /= size;
+
+  double sum = 0, sum0 = 0, sum1 = 0;
+  for (c = 0; c < size; c++) {
+    item = im0[c] - im1[c];
+    sum += item * item;
+
+    item = im0[c] - int0avg;
+    sum0 += item * item;
+
+    item = im1[c] - int1avg;
+    sum1 += item * item;
+  }
+
+  // square the whole fraction to avoid sqrt call
+  return sum * sum / sum0 / sum1;
 }
 
 
@@ -209,14 +298,15 @@ int main(int argc, char **argv) {
   fprintf(w, "%d\n", c->height * c->width);
 
   for (xc = 0; xc < c->width; xc++) {
-    printf("col %d\n", xc);
+    printf("\rCol %d", xc);
+    fflush(stdout);
     for (yc = 0; yc < c->height; yc++) {
       for (d = sd; d <= ed; d++) {
         z = B * F / d;
         xl = xc - BL * F / z;
         xr = xc - BR * F / z;
-        ml = ssd(c, l, xc, xl, yc);
-        mr = ssd(c, r, xc, xr, yc);
+        ml = MATCHER(c, l, xc, xl, yc);
+        mr = MATCHER(c, r, xc, xr, yc);
         m[d - sd] = ml + mr;
       }
       md = minimum(sd, ed, m);
@@ -237,4 +327,5 @@ int main(int argc, char **argv) {
   free_bmp(db);
   free_bmp(l);
   free_bmp(c);
+  printf("\r            \r");
 }
