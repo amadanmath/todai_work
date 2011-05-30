@@ -205,7 +205,7 @@ int main(int argc, char **argv) {
   double ml, mr;
   double m[ed - sd + 1];
   double md;
-  FILE *w = fopen("points.dat", "w");
+  FILE *w = fopen("points.txt", "w");
   fprintf(w, "%d\n", c->height * c->width);
 
   for (xc = 0; xc < c->width; xc++) {
@@ -220,10 +220,10 @@ int main(int argc, char **argv) {
         m[d - sd] = ml + mr;
       }
       md = minimum(sd, ed, m);
-      z = B * F / md;
+      z = -B * F / md;
       fprintf(w, "%f\t%f\t%f\t%d\t%d\t%d\n",
-          (xc - xh) * z / F,
-          (yh - yc) * z / F,
+          (xh - xc) * z / F,
+          (yc - yh) * z / F,
           z,
           RED(c, xc, yc),
           GRN(c, xc, yc),
