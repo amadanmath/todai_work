@@ -4,10 +4,18 @@
 #include <math.h>
 
 // image parameters
+#ifndef F
 #define F 500.0
+#endif
+#ifndef B
 #define B 0.1
+#endif
+#ifndef ZMIN
 #define ZMIN 2.0
+#endif
+#ifndef ZMAX
 #define ZMAX 7.5
+#endif
 
 // matcher box width and height
 #ifndef IJ
@@ -307,7 +315,8 @@ int main(int argc, char **argv) {
         xr = xc - BR * F / z;
         ml = MATCHER(c, l, xc, xl, yc);
         mr = MATCHER(c, r, xc, xr, yc);
-        m[d - sd] = ml + mr;
+        // take the more similar side
+        m[d - sd] = ml < mr ? ml : mr;
       }
       md = minimum(sd, ed, m);
       z = -B * F / md;
