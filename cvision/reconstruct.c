@@ -46,10 +46,7 @@
 #define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
 #define MAX(X,Y) ((X) > (Y) ? (X) : (Y))
 
-typedef unsigned char  byte;
-typedef unsigned short word;
-typedef unsigned long  dword;
-
+// Bitmap data type, to store BMP images
 typedef struct {
   unsigned int width;
   unsigned int height;
@@ -58,49 +55,66 @@ typedef struct {
   unsigned char *data;
 } BITMAP;
 
+// Use in case of error
 void die(char *str) {
   fprintf(stderr, "Error: %s\n", str);
   exit(1);
 }
 
+// Decode a long from a character array
 unsigned long get_long(unsigned char *buf) {
   return (unsigned long)buf[0] + ((unsigned long)buf[1] << 8) + ((unsigned long)buf[2] << 16) + ((unsigned long)buf[3] << 24);
 }
 
+// Decode an int from a character array
 unsigned int get_int(unsigned char *buf) {
   return (unsigned int)buf[0] + ((unsigned int)buf[1] << 8);
 }
 
+// load a BMP from a file
 BITMAP *load_bmp(char *file) {
-  static byte buf[54];
+  static unsigned char buf[54];
   FILE *f;
   size_t dummy;
   unsigned int w, h, r;
+
   f = fopen(file, "rb");
+  // load the header
   dummy = fread(buf, 1, 54, f);
   if (buf[0] != 'B' && buf[1] != 'M') die("Not a bitmap");
+
+  // find out how big the image is
   w = get_long(buf + 18);
   h = get_long(buf + 22);
   r = w;
-  while (r & 3) r++; // rowlen divisible by 4
+  while (r & 3) r++; // rowlen must be divisible by 4
+
+  // some sanity checks
   if (get_int(buf + 28) != 24) die("Not a 24-bit BMPs");
   if (get_long(buf + 30)) die("Compressed");
+
+  // allocate and initialise
   BITMAP *b = (BITMAP *)malloc(sizeof(BITMAP));
   b->width = w;
   b->height = h;
   b->height1 = h - 1;
   b->rowlen = r;
+
+  // read the rest of the file, and put the header where it belongs
   b->data = (unsigned char *)malloc(r * h * 3 + 54);
   dummy = fread(b->data + 54, 1, r * h * 3, f);
   memcpy(b->data, buf, 54);
   return b;
 }
 
+// release the bitmap structure memory
 void free_bmp(BITMAP *b) {
   free(b->data);
   free(b);
 }
 
+// make a copy of a bitmap image
+// (used only for debugging, to create a depth image)
 BITMAP *clone_bmp(BITMAP *b) {
   unsigned int size = b->rowlen * b->height * 3 + 54;
   BITMAP *c = (BITMAP *)malloc(sizeof(BITMAP));
@@ -112,6 +126,14 @@ BITMAP *clone_bmp(BITMAP *b) {
   return c;
 }
 
+// save a bitmap to a file
+// (used only for debugging, to create a depth image)
+void save_bmp(BITMAP *b, char *filename) {
+  FILE *f = fopen(filename, "wb");
+  fwrite(b->data, 1, 54 + b->rowlen * b->height * 3, f);
+}
+
+// set a pixel in a bitmap to a particular colour value
 inline void set_pixel(BITMAP *b, unsigned int x, unsigned int y,
     unsigned int rr, unsigned int gg, unsigned int bb) {
   if (x >= b->width || y >= b->height) return;
@@ -121,13 +143,9 @@ inline void set_pixel(BITMAP *b, unsigned int x, unsigned int y,
   b->data[offset + 2] = bb;
 }
 
-void save_bmp(BITMAP *b, char *filename) {
-  FILE *f = fopen(filename, "wb");
-  fwrite(b->data, 1, 54 + b->rowlen * b->height * 3, f);
-}
-
 
 // matchers
+
 
 double sad(BITMAP *ref, BITMAP *img, int x0, int x1, int y) {
   double item, result = 0;
@@ -191,7 +209,9 @@ double ssd(BITMAP *ref, BITMAP *img, int x0, int x1, int y) {
       g = GRN(ref, xx0, yy) - GRN(img, xx1, yy);
       b = BLU(ref, xx0, yy) - BLU(img, xx1, yy);
 
+      // XXX departure from the instructions:
       // for better matching, use each channel separately
+      // (thus same-in-average intensity will not be treated as same colour)
       result += r * r + g * g + b * b;
     }
   }
@@ -234,6 +254,8 @@ double ncc(BITMAP *ref, BITMAP *img, int x0, int x1, int y) {
   int0avg /= size;
   int1avg /= size;
 
+  // now that we know the average values, we can go back and apply the
+  // formula
   double sum = 0, sum0 = 0, sum1 = 0;
   for (c = 0; c < size; c++) {
     item = im0[c] - im1[c];
@@ -246,25 +268,31 @@ double ncc(BITMAP *ref, BITMAP *img, int x0, int x1, int y) {
     sum1 += item * item;
   }
 
+  // XXX departure from the instructions:
   // square the whole fraction to avoid sqrt call
   return sum * sum / sum0 / sum1;
 }
 
 
+// find an x where f(x) is lowest
+// values[0]         = f(from)
+// values[to - from] = f(to)
 double minimum(int from, int to, double *values) {
   int x = from;
   double y = values[0];
   int i = to - from;
 
-  // find least value
+  // find the least value
   while (--i) {
     if (values[i] < y) {
       x = from + i;
       y = values[i];
     }
   }
+  // if we're on the edge of the array, we can't interpolate;
   if (x == from || x == to) return x;
 
+  // quadratic interpolation, preparation
   int xp = x + 1;
   int xm = x - 1;
   int x2 = x * x;
@@ -272,53 +300,87 @@ double minimum(int from, int to, double *values) {
   int xm2 = xm * xm;
   double ym = values[x - from - 1];
   double yp = values[x - from + 1];
+
   // system of 3 linear equations at [xm, x, xp]:
   // m(d) = ad^2 + bd + c
-  double k = (x2 - xp2) / (x - xp);
-  double a = ((y - yp) / (x - xp) - (y - ym) / (x - xm)) / (k - (x2 - xm2) / (x - xm));
-  double b = (y - yp) / (x - xp) - a * k;
-  if (a == 0 && b == 0) return x;
-  // not needed:
+  // full equations are written in comments, but
+  // knowing xp and xm simplifies them a lot
+  
+  // double k = (x2 - xp2) / (x - xp);
+  double k = xp2 - x2;
+
+  // double a = ((y - yp) / (x - xp) - (y - ym) / (x - xm)) / (k - (x2 - xm2) / (x - xm));
+  double a = (yp - 2 * y + ym) / (k - x2 + xm2);
+
+  // flat line, we will pick an arbitrary value
+  if (a == 0) return x;
+
+  // double b = (y - yp) / (x - xp) - a * k;
+  double b = yp - y - a * k;
+
+  // not needed, but in a "real" 3-equation system there would be:
   // double c = y - b * x - a * x2;
   
   // minimum is at the null-point of the derivation of the quadratic curve
   return -b / (2 * a);
 }
 
-#define DEBUG_ROWS_START 0
-#define DEBUG_ROWS_END (c->height)
 
 int main(int argc, char **argv) {
+  // load the bitmaps
   BITMAP *c = load_bmp("viewC.bmp");
   BITMAP *l = load_bmp("viewL.bmp");
   BITMAP *r = load_bmp("viewR.bmp");
+
+  // debugging code: allocate the depth map image
   BITMAP *db = clone_bmp(c);
-  int xc, yc, d;
+
+  // centre of the image (in pixels)
   int xh = c->width / 2;
   int yh = c->height / 2;
+
+  // displacement domain boundaries
   int sd = floor(B * F / ZMAX);
   int ed = ceil(B * F / ZMIN);
   double z, xl, xr;
   double ml, mr;
   double m[ed - sd + 1];
   double md;
+  int xc, yc, d;
+
+  // start the output file
   FILE *w = fopen("points.txt", "w");
   fprintf(w, "%d\n", c->height * c->width);
 
-  for (xc = 0; xc < c->width; xc++) {
-    printf("\rCol %d", xc);
+  // for each pixel:
+  for (yc = 0; yc < c->height; yc++) {
+    printf("\rRow %d", yc);
     fflush(stdout);
-    for (yc = 0; yc < c->height; yc++) {
+    for (xc = 0; xc < c->width; xc++) {
+      // check all possible (integral) displacements
       for (d = sd; d <= ed; d++) {
+        // find the Z coordinate from the displacement
         z = B * F / d;
+
+        // use it to calculate the corresponding pixels in the left and
+        // right images
         xl = xc - BL * F / z;
         xr = xc - BR * F / z;
+
+        // find the match scores for the left and right image
         ml = MATCHER(c, l, xc, xl, yc);
         mr = MATCHER(c, r, xc, xr, yc);
+
         // take the more similar side
         m[d - sd] = ml < mr ? ml : mr;
       }
+
+      // find the x where the displacement was the least
       md = minimum(sd, ed, m);
+
+      // recover the Z and calculate the X and Y coordinates
+      // (Y and Z are flipped in sign because of how the axes are set up
+      // in 3DViewer)
       z = -B * F / md;
       fprintf(w, "%f\t%f\t%f\t%d\t%d\t%d\n",
           (xh - xc) * z / F,
@@ -328,13 +390,19 @@ int main(int argc, char **argv) {
           GRN(c, xc, yc),
           BLU(c, xc, yc));
 
-      // DEBUG:
+      // debugging code: make a distance map
+      // (with red channel signifying closeness)
       db->data[56 + (xc + db->rowlen * (db->height - yc - 1)) * 3] = (md - sd) * 256 / (ed - sd);
     }
   }
+  // debugging code: save the distance map
   save_bmp(db, "dist-view.bmp");
+
+  // deallocate all the bitmaps
   free_bmp(db);
   free_bmp(l);
   free_bmp(c);
   printf("\r            \r");
+
+  return 0;
 }
