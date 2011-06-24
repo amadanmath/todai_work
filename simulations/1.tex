@@ -1,0 +1,110 @@
+\documentclass{article}
+\usepackage{amsmath}
+
+\begin{document}
+
+\title{Basic Lectures on Emerging Design and Informatics III\\
+Report 1}
+
+\author{Goran Topi\'{c}, 49-106312}
+\maketitle
+
+Starting with the Taylor series of the four non-central stencils:
+\begin{align}
+  f_{i-2} &= f_i - 2h f'_i + \frac{(2h)^2}{2!} f''_i - \frac{(2h)^3}{3!} f'''_i + \frac{(2h)^4}{4!} f^{(4)}_i - \frac{(2h)^5}{5!} f^{(5)}_i + \frac{(2h)^6}{6!} f^{(6)}_i - \dots \\
+  f_{i-1} &= f_i - h f'_i + \frac{h^2}{2!} f''_i - \frac{h^3}{3!} f'''_i + \frac{h^4}{4!} f^{(4)}_i - \frac{h^5}{5!} f^{(5)}_i + \frac{(2h)^6}{6!} f^{(6)}_i - \dots \\
+  f_{i+1} &= f_i + h f'_i + \frac{h^2}{2!} f''_i + \frac{h^3}{3!} f'''_i + \frac{h^4}{4!} f^{(4)}_i + \frac{h^5}{5!} f^{(5)}_i + \frac{(2h)^6}{6!} f^{(6)}_i + \dots \\
+  f_{i+2} &= f_i + 2h f'_i + \frac{(2h)^2}{2!} f''_i + \frac{(2h)^3}{3!} f'''_i + \frac{(2h)^4}{4!} f^{(4)}_i + \frac{(2h)^5}{5!} f^{(5)}_i + \frac{(2h)^6}{6!} f^{(6)}_i + \dots
+\end{align}
+
+Equivalently,
+\begin{align}
+  &f_{i-2} = f_i - 2h f'_i + 2h^2 f''_i - \frac{4}{3}h^3 f'''_i + \frac{2}{3}h^4 f^{(4)}_i - \frac{4}{15}h^5 f^{(5)}_i + \frac{4}{45}h^6 f^{(6)} - \dots \\
+  &f_{i-1} = f_i - h f'_i + \frac{1}{2}h^2 f''_i - \frac{1}{6}h^3 f'''_i + \frac{1}{24}h^4 f^{(4)}_i - \frac{1}{120}h^5 f^{(5)}_i + \frac{1}{720}h^6 f^{(6)} - \dots \\
+  &f_{i-1} = f_i + h f'_i + \frac{1}{2}h^2 f''_i + \frac{1}{6}h^3 f'''_i + \frac{1}{24}h^4 f^{(4)}_i + \frac{1}{120}h^5 f^{(5)}_i + \frac{1}{720}h^6 f^{(6)} + \dots \\
+  &f_{i+2} = f_i + 2h f'_i + 2h^2 f''_i + \frac{4}{3}h^3 f'''_i + \frac{2}{3}h^4 f^{(4)}_i + \frac{4}{15}h^5 f^{(5)}_i + \frac{4}{45}h^6 f^{(6)} + \dots
+\end{align}
+
+Looking for $f'_i$, we first subtract (8) and (5), and (7) and (6) to eliminate the $f''_i$ term:
+\begin{align}
+  f_{i+2} - f_{i-2} &= 4hf'_i + \frac{8}{3}h^3 f'''_i + \frac{8}{15}h^5 f^{(5)}_i + \dots \\
+  f_{i+1} - f_{i-1} &= 2f'_i + \frac{1}{3}h^3 f'''_i + \frac{1}{60}h^5 f^{(5)}_i + \dots
+\end{align}
+
+We then multiply (10) by 8 and subtract from (9) to eliminate the $f'''_i$ term, then extract $f'_i$:
+\begin{align}
+  f_{i+2} - f_{i-2} - 8f_{i+1} + 8f_{i-1} &= -12hf'_i + \frac{2}{5}h^5 f^{(5)}_i + \dots
+\end{align}
+\begin{align}
+  f'_i &= \frac{f_{i-2} - 8f_{i-1} + 8f_{i+1} - f_{i+2} + \frac{2}{5}h^5 f^{(5)}_i - \dots}{12h} \\
+       &= \frac{f_{i-2} - 8f_{i-1} + 8f_{i+1} - f_{i+2}}{12h} + h^4\frac{1}{30}f^{(5)}_i + \dots
+\end{align}
+
+Truncating $h^4(\frac{1}{30}f^{(5)}_i + \dots)$ gives us the approximate $f'_i$, with truncation error on the order of $O(h^4)$:
+\begin{align}
+  f'_i &\approx \frac{f_{i-2} - 8f_{i-1} + 8f_{i+1} - f_{i+2}}{12h}
+\end{align}
+
+To find $f''_i$, we start similarly, this time adding (5) and (8), and (6) and (7) to eliminate the $f'''_i$ term.
+\begin{align}
+  f_{i+2} + f_{i-2} &= 2f_i + 4h^2f''_i + \frac{4}{3}h^4 f^{(4)}_i + \frac{8}{45}h^6 f^{(6)}_i + \dots \\
+  f_{i+1} + f_{i-1} &= 2f_i + h^2f''_i + \frac{1}{12}h^4 f^{(4})_i + \frac{1}{360}h^6 f^{(6)}_i + \dots
+\end{align}
+
+Now we can again multiply (16) by 16 and subtract from (15) to eliminate the $f^{(4)}_i$ term:
+\begin{align}
+  f_{i+2} + f_{i-2} - 16f_{i+1} - 16f_{i-1} &= -30f_i - 12h^2f''_i + \frac{2}{15}h^6 f^{(6)}_i + \dots
+\end{align}
+\begin{align}
+  f''_i = \frac{16f_{i+1} + 16f_{i-1} - f_{i+2} - f_{i-2} - 30f_i}{12h^2} + \frac{1}{90}h^4 f^{(6)}_i + \dots
+\end{align}
+
+The leading error term is again of order $O(h^4)$, and the approximate $f''_i$ is
+\begin{align}
+  f''_i &\approx \frac{16f_{i+1} + 16f_{i-1} - f_{i+2} - f_{i-2} - 30f_i}{12h^2}
+\end{align}
+
+When calculating $f'''_i$, we can now only eliminate one term. If we
+were to try to replicate the process we performed in (11) and (17), we
+would get a tautology (as a result of using the value of $f'$ calculated
+in (11)). Thus, we must now proceed as if we only had 3 stencils (but
+using a 5-stencil calculation of $f'$).  We can substitute (14) into
+(10):
+\begin{align}
+  f_{i+1} - f_{i-1} &= 2h(\frac{f_{i-2} - 8f_{i-1} + 8f_{i+1} - f_{i+2}}{12h} + O(h^4)) + \frac{1}{3}h^3 f'''_i + \frac{1}{60}h^5 f^{(5)}_i + \dots
+\end{align}
+\begin{align}
+  f_{i+1} - f_{i-1} &= \frac{1}{6}f_{i-2} - \frac{4}{3}f_{i-1} + \frac{4}{3}f_{i+1} - \frac{1}{6}f_{i+2} + O(h^5) + \frac{1}{3}h^3 f'''_i + \frac{1}{60}h^5 f^{(5)}_i + \dots
+\end{align}
+\begin{align}
+  \frac{1}{3}h^3 f'''_i = f_{i+1} - f_{i-1} - \frac{1}{6}f_{i-2} + \frac{4}{3}f_{i-1} - \frac{4}{3}f_{i+1} + \frac{1}{6}f_{i+2} + O(h^5)
+\end{align}
+
+Dividing by $\frac{h^3}{3}$, we get
+\begin{align}
+  f'''_i &= \frac{f_{i+2} - 2f_{i+1} + 2f_{i-1} - f_{i-2}}{2h^3} + O(h^2)
+\end{align}
+The truncation error is now $O(h^2)$, and the approximated $f'''$ is
+\begin{align}
+  f'''_i &\approx \frac{f_{i+2} - 2f_{i+1} + 2f_{i-1} - f_{i-2}}{2h^3}
+\end{align}
+
+In a similar way, $f^{(4)}$ can be calculated by substituting (19) into (16):
+\begin{align}
+  f_{i+1} + f_{i-1} &= 2f_i + h^2(\frac{16f_{i+1} + 16f_{i-1} - f_{i+2} - f_{i-2} - 30f_i}{12h^2} + O(h^4)) + \frac{1}{12}h^4 f^{(4})_i + \frac{1}{360}h^6 f^{(6)}_i + \dots
+\end{align}
+
+Multiplying everything by 12 for ease of calculation, we get:
+\begin{align}
+  12f_{i+1} + 12f_{i-1} &= 24f_i + 16f_{i+1} + 16f_{i-1} - f_{i+2} - f_{i-2} - 30f_i + O(h^6) + h^4 f^{(4})_i + \frac{1}{30}h^6 f^{(6)}_i + \dots
+\end{align}
+\begin{align}
+  f^{(4)}_i = \frac{f_{i+2} - 4f_{i+1} + 6f_i - 4f_{i-1} + f_{i-2}}{h^4} + O(h^2)
+\end{align}
+
+The truncation error ends up being $O(h^2)$ for the same reason it does when calculating $f'''$. The approximated $f^{(4)}$ is:
+\begin{align}
+  f^{(4)}_i \approx \frac{f_{i+2} - 4f_{i+1} + 6f_i - 4f_{i-1} + f_{i-2}}{h^4}
+\end{align}
+
+\end{document}
