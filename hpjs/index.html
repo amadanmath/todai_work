@@ -1,0 +1,951 @@
+<html>
+  <head>
+    <title>High-Performance Javascript</title>
+    <link rel="stylesheet" type="text/css" href="presentation.css"/>
+    <link rel="stylesheet" type="text/css" href="prettify.css"/> 
+    <link href='http://fonts.googleapis.com/css?family=Ubuntu:light&v1' rel='stylesheet' type='text/css'>
+    <link href='http://fonts.googleapis.com/css?family=Caudex:bold&v1' rel='stylesheet' type='text/css'>
+    <script src="jquery.min.js" type="text/javascript"></script> 
+    <script src="fathom.js" type="text/javascript"></script> 
+    <script src="prettify.js" type="text/javascript"></script> 
+    <script> 
+      $(document).ready(function() {
+        $('code').addClass('prettyprint').attr('tabIndex', 0);
+        prettyPrint();
+
+        var fathom = $('#presentation').Fathom({
+            onActivateSlide: function() {
+              var $slide = $(this);
+              $slide.find('pre:first').focus();
+            }
+        });
+
+        var lap = function(str) {
+          var duration = new Date() - this.start;
+          var $msg = $('<div>').html(str + duration + "ms");
+          this.append($msg);
+        }
+
+        var runClick = function(evt) {
+          var $logs = $(this).closest('div.logs');
+          var $script = $logs.next();
+          var code = $script.text().replace('&gt;', '>').replace('&lt;', '<');
+          $logs.empty().lap = lap;
+          setTimeout(function() {
+            var start = +new Date();
+            $logs.start = start;
+            new Function(code).call($logs);
+            $logs.lap("Done in ");
+          }, 25);
+        };
+        var $logs = $('<div class="logs"><div>Run</div></div>').click(runClick);
+        $('.run').before($logs);
+      });
+    </script>       
+  </head>
+  <body>
+    <div id="presentation">
+      <div class="slide title">
+        <h1>High-Performance Javascript</h1>
+        <h2><span class="notimportant">book by</span> Nicholas C. Zakas</h2>
+        <h2><span class="notimportant">presentation by</span> Goran Topic</h2>
+      </div>
+
+      <!-- --------------------------------------------------------- -->
+      <div class="slide chapter">
+        <h1>Loading and Execution</h1>
+        <h2>or how not to block your page</h2>
+
+        <ul>
+          <li>The first job: getting your scripts to run</li>
+          <li>Standard way: list them in <code>&lt;head/&gt;</code></li>
+          <li>That way, we know they are available</li>
+        </ul>
+      </div>
+
+      <div class="slide">
+        <h1>"Standard" way</h1>
+        <pre>
+          <code>
+&lt;html&gt;
+  &lt;head&gt;
+    &lt;title&gt;Test&lt;/title&gt;
+    &lt;script type="text/javascript" src="file1.js"&gt;&lt;/script&gt;
+    &lt;script type="text/javascript" src="file2.js"&gt;&lt;/script&gt;
+    &lt;script type="text/javascript"&gt;
+      console.log('Inline script');
+    &lt;/script&gt;
+  &lt;/head&gt;
+  &lt;body&gt;
+    Stuff.
+  &lt;/body&gt;
+&lt;/html&gt;</code>
+        </pre>
+      </div>
+
+      <div class="slide">
+        <h1>"Standard" way not standard any more</h1>
+        <ul>
+          <li>Listing scripts in your <code>&lt;head/&gt;</code> is
+            baaaad, m'kaaay?</li>
+          <li>The reason: <code>&lt;script/&gt;</code> tags are
+            sequential.
+            <ul>
+              <li>They block the browser until the script is loaded <em>and</em> executed.</li>
+            </ul>
+          </li>
+          <li>Several ways around it.</li>
+        </ul>
+      </div>
+
+      <div class="slide">
+        <h1>Non-standard (but fast) ways</h1>
+        <ul>
+          <li><code>&lt;script defer&gt;</code> markup
+            <blockquote>
+              &mdash; I promise, I am not touching DOM!<br/>
+              &mdash; Okay, go ahead...
+            </blockquote>
+            <ul>
+              <li>After DOM is loaded, but before <code>onload</code> is triggered</li>
+              <li>Not supported in all browsers</li>
+            </ul>
+          </li>
+          <li>Dynamic <code>&lt;script src&gt;</code>
+            <ul>
+              <li>The script is executed automatically, immediately after loading</li>
+            </ul>
+          </li>
+          <li>Dynamic <code>&lt;script&gt;</code> with Ajax'd contents
+            <ul>
+              <li>The script is not executed automatically</li>
+              <li>Allows events: <code>onload</code> for the nice
+                browsers, <code>onreadystatechange</code> for the pariah</li>
+              <li>Cross-Server Scripting restriction</li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
+      <div class="slide">
+        <h1>Use a library!</h1>
+        <ul>
+          <li><a href="http://developer.yahoo.com/yui/">YUI</a></li>
+          <li><a href="http://github.com/rgrove/lazyload/">LazyLoad</a></li>
+          <li><a href="headjs.com">head.js</a></li>
+        </ul>
+      </div>
+
+      <!-- --------------------------------------------------------- -->
+      <div class="slide chapter">
+        <h1>Data Access</h1>
+        <h2>or the danger of objects</h2>
+        <ul>
+          <li>Four types of data:
+            <ul>
+              <li>Literals</li>
+              <li>Variables</li>
+              <li>Array members</li>
+              <li>Object members</li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
+      <div class="slide">
+        <h1>Literals and Variables</h1>
+        <pre>
+          <code class="run">
+var sum = 0;
+for(var i = 0; i < 50000000; i++) {
+  sum += 2;
+}
+          </code>
+          <code class="run">
+var x = 2, sum = 0;
+for(var i = 0; i < 50000000; i++) {
+  sum += x;
+} </code>
+        </pre>
+      </div>
+
+      <div class="slide">
+        <h1>Array and Object Members</h1>
+        <pre>
+          <code class="run">
+var sum = 0;
+var a = [2];
+for(var i = 0; i < 50000000; i++) {
+  sum += a[0];
+}
+          </code>
+          <code class="run">
+var sum = 0;
+var o = { x: 2 };
+for(var i = 0; i < 50000000; i++) {
+  sum += o.x;
+} </code>
+        </pre>
+      </div>
+
+      <div class="slide">
+        <h1>Scope</h1>
+        <ul>
+          <li>Whenever an identifier is encountered, it has to be
+            resolved by traversing the scope chain</li>
+          <li>When functions access non-local values, a closure is
+            created and added to the scope chain</li>
+          <li><code>with</code> and <code>catch</code> blocks also augment
+            the scope chain</li>
+          <li><code>with</code> and <code>eval</code> prevent
+            optimisation</li>
+        </ul>
+      </div>
+
+      <div class="slide">
+        <h1>Local scope</h1>
+        <pre>
+          <code class="run">
+function benchmark() {
+  var x = 2, sum = 0;
+  for(var i = 0; i < 50000000; i++) {
+    sum += x;
+  }
+}
+benchmark();
+          </code>
+        </pre>
+      </div>
+
+      <div class="slide">
+        <h1>Non-Local scope (closure)</h1>
+        <pre>
+          <code class="run">
+var x = 2;
+function benchmark() {
+  var sum = 0;
+  for(var i = 0; i < 50000000; i++) {
+    sum += x;
+  }
+}
+benchmark();
+          </code>
+        </pre>
+      </div>
+
+      <div class="slide">
+        <h1>Augmented scope (<code>with</code>)</h1>
+        <h2>50x fewer iterations!</h2>
+        <pre>
+          <code class="run">
+function benchmark() {
+  var x = 2, sum = 0;
+  with({ a: null }) {
+    for(var i = 0; i < 1000000; i++) { // 50x fewer iterations!
+      sum += x;
+    }
+  }
+}
+benchmark();
+          </code>
+        </pre>
+      </div>
+
+      <div class="slide">
+        <h1>Augmented scope (<code>catch</code>)</h1>
+        <pre>
+          <code class="run">
+function benchmark() {
+  var x = 2, sum = 0;
+  try {
+    throw "Error";
+  } catch(ex) {
+    for(var i = 0; i < 50000000; i++) {
+      sum += x;
+    }
+  }
+}
+benchmark();
+          </code>
+        </pre>
+      </div>
+
+      <div class="slide">
+        <h1>Augmented scope (<code>eval</code>)</h1>
+        <pre>
+          <code class="run">
+function benchmark() {
+  var sum = 0;
+  eval('var x = 3;');
+  for(var i = 0; i < 50000000; i++) {
+    sum += x;
+  }
+}
+benchmark();
+          </code>
+        </pre>
+      </div>
+
+      <div class="slide">
+        <h1>Prototypal Inheritance</h1>
+        <ul>
+          <li>In JavaScript, objects don't inherit from classes</li>
+          <li>They inherit from other objects directly</li>
+          <li>Functions are objects; constructors are functions</li>
+          <li>Constructor's <code>.prototype</code> is copied into the
+            new object's <code>.__proto__</code></li>
+          <li>When an unknown member is looked up, JavaScript searches
+            back through the prototype chain</li>
+          <li>My testing: very slight difference on a modern browser</li>
+        </ul>
+      </div>
+
+      <div class="slide">
+        <h1>Prototypal Inheritance - 3 level</h1>
+        <pre>
+          <code class="run">
+function Grandparent() {
+  this.x = 2;
+}
+
+function Parent() { }
+Parent.prototype = new Grandparent();
+
+function Self() { }
+Self.prototype = new Parent();
+
+function benchmark() {
+  var obj = new Self(), sum = 0;
+  for(var i = 0; i < 50000000; i++) {
+    sum += obj.x;
+  }
+}
+benchmark();</code>
+        </pre>
+      </div>
+
+      <div class="slide">
+        <h1>Value Caching</h1>
+        <ul>
+          <li>It is recommended to cache deep object references, if they
+            are used more than once</li>
+          <li><strong>Warning:</strong> due to bad language design, it is usually an
+            error to cache methods
+            <ul>
+              <li>The reason is that <code>this</code> inside the
+                function will not point at the host object any more,
+                unless care is taken to invoke the function with
+                <code>.call</code> or <code>.apply</code></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
+      <!-- --------------------------------------------------------- -->
+      <div class="slide chapter">
+        <h1>DOM Scripting</h1>
+        <h2>or javascripting in the real world</h2>
+        <ul>
+          <li>DOM engine is split from JS engine
+            <ul>
+              <li>Makes <a href="nodejs.com">node.js</a> possible (JS
+                outside the browser)</li>
+              <li>Makes multiple execution engines possible (e.g.
+                Internet Explorer's VBScript)</li>
+            </ul>
+          </li>
+          <li>Thus, DOM access from JavaScript is slow</li>
+          <li>Be sure to cache any DOM objects or their properties that
+          are read more than once</li>
+        </ul>
+      </div>
+
+      <div class="slide">
+        <h1>Accessing DOM in a loop</h1>
+        <h2>"But it's just a simple assignment!"</h2>
+        <pre>
+          <code class="run">
+this.append('&lt;div id="dom_assignment_loop"&gt;0&lt;/div&gt;');
+var element = document.getElementById('dom_assignment_loop');
+var sum = 0;
+for (var i = 0; i < 10000; i++) {
+  sum += i;
+  element.innerHTML = sum;
+}
+          </code>
+          <code class="run">
+this.append('&lt;div id="dom_loop_assignment"&gt;0&lt;/div&gt;');
+var element = document.getElementById('dom_loop_assignment');
+var sum = 0;
+for (var i = 0; i < 10000; i++) {
+  sum += i;
+}
+element.innerHTML = sum;
+          </code>
+        </pre>
+      </div>
+
+      <div class="slide chapter">
+        <h1>On DHTML</h1>
+        <ul>
+          <li>There are two ways to create HTML dynamically</li>
+          <li><code>.innerHTML</code> is somewhat faster in older
+            browsers, and easier to write</li>
+          <li>DOM methods (<code>document.createElement</code>,
+            <code>.appendChild</code>, <code>.setAttribute</code>) are
+            somewhat faster in newer browsers, but make for verbose
+            code</li>
+          <li>My testing: FF 5, Chromium 12, Opera 11 all faster at <code>.innerHTML</code></li>
+          <li>Example: a multiplication table</li>
+        </ul>
+      </div>
+
+      <div class="slide">
+        <h1><code>.innerHTML</code>, no attributes</h1>
+        <pre>
+          <code class="run">
+var limit = 500;
+var table = document.createElement('table');
+var html = '';
+for (var y = 0; y < limit; y++) {
+  html += '&lt;tr&gt;';
+  for (var x = 0; x < limit; x++) {
+    html += '&lt;td&gt;';
+    html += x * y;
+    html += '&lt;/td&gt;';
+  }
+  html += '&lt;/tr&gt;';
+}
+this.lap('String built in ');
+table.innerHTML = html;
+          </code>
+        </pre>
+      </div>
+
+      <div class="slide">
+        <h1>DOM methods, no attributes</h1>
+        <pre>
+          <code class="run">
+var limit = 500;
+var table = document.createElement('table');
+for (var y = 0; y < limit; y++) {
+  var tr = document.createElement('tr');
+  for (var x = 0; x < limit; x++) {
+    var td = document.createElement('td');
+    var txt = document.createTextNode(x * y);
+    td.appendChild(txt);
+    tr.appendChild(td);
+  }
+  table.appendChild(tr);
+}
+          </code>
+        </pre>
+      </div>
+
+      <div class="slide">
+        <h1><code>.innerHTML</code>, with attributes</h1>
+        <pre>
+          <code class="run">
+var limit = 500;
+var table = document.createElement('table');
+var html = '';
+for (var y = 0; y < limit; y++) {
+  if (y & 1) {
+    html += '&lt;tr&gt;';
+  } else {
+    html += '&lt;tr class="alt"&gt;';
+  }
+  for (var x = 0; x < limit; x++) {
+    html += '&lt;td data-x="' + x + '" data-y="' + y +
+        '" title="' + x + '*' + y + '"&gt;';
+    html += x * y;
+    html += '&lt;/td&gt;';
+  }
+  html += '&lt;/tr&gt;';
+}
+this.lap('String built in ');
+table.innerHTML = html;
+          </code>
+        </pre>
+      </div>
+
+      <div class="slide">
+        <h1>DOM methods, with attributes</h1>
+        <pre>
+          <code class="run">
+var limit = 500;
+var table = document.createElement('table');
+for (var y = 0; y < limit; y++) {
+  var tr = document.createElement('tr');
+  if (y & 1) {
+    tr.setAttribute('class', 'alt');
+  }
+  for (var x = 0; x < limit; x++) {
+    var td = document.createElement('td');
+    var txt = document.createTextNode(x * y);
+    td.setAttribute('title', x + '*' + y);
+    td.setAttribute('data-x', x);
+    td.setAttribute('data-y', y);
+    td.appendChild(txt);
+    tr.appendChild(td);
+  }
+  table.appendChild(tr);
+}
+          </code>
+        </pre>
+      </div>
+
+      <div class="slide">
+        <h1>HTML Collections</h1>
+        <ul>
+          <li>...look like arrays, but are not (no array methods, just
+            <code>.length</code>)</li>
+          <li>...are live. Their values change as DOM changes</li>
+          <li>...have to be refreshed each time <code>.length</code> is
+            accessed. Cache that <code>.length</code>!
+            <ul>
+              <li>For performance</li>
+              <li>For security</li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
+      <div class="slide">
+        <h1>How to crash the browser</h1>
+        <pre>
+          <code>
+// example from the book
+// make one new div for every existing div
+var alldivs = document.getElementsByTagName('div');
+for (var i = 0; i < alldivs.length; i++) {
+  document.body.appendChild(document.createElement('div'));
+}
+          </code>
+        </pre>
+      </div>
+
+      <div class="slide">
+        <h1>How about if we just count them?</h1>
+        <h2>(in a stupid way)</h2>
+        <pre>
+          <code class="run">
+for (var i = 0; i < 100000; i++) {
+  var alldivs = document.getElementsByTagName('div');
+  var count = 0;
+  for (var n = 0; n < alldivs.length; n++) {
+    count += 1;
+  }
+}
+          </code>
+        </pre>
+      </div>
+
+      <div class="slide">
+        <h1>Cache that <code>.length</code>!</h1>
+        <pre>
+          <code class="run">
+for (var i = 0; i < 100000; i++) {
+  var alldivs = document.getElementsByTagName('div');
+  var count = 0;
+  var len = alldivs.length;
+  for (var n = 0; n < len; n++) {
+    count += 1;
+  }
+}
+          </code>
+        </pre>
+      </div>
+
+      <div class="slide">
+        <h1>Walking the DOM</h1>
+        <ul>
+          <li>Two basic ways to walk the DOM:
+            <ul>
+              <li>Iterating over <code>.childNodes</code> (reported slow
+                in older IE versions)</li>
+              <li>Starting with <code>.firstChild</code>, then moving on to
+                each <code>.nextSibling</code></li>
+            </ul>
+          </li>
+          <li>However, this also walks through text nodes...</li>
+        </ul>
+      </div>
+
+      <div class="slide">
+        <h1>Walking the DOM Elements</h1>
+        <ul>
+          <li>There are parallel methods that skip text nodes:
+            <ul>
+              <li>Iterating over <code>.children</code></li>
+              <li>Starting with <code>.firstElementChild</code>, then moving on to
+                each <code>.nextElementSibling</code> (not supported in
+                IE)</li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
+      <div class="slide">
+        <h1>Finding the DOM Elements</h1>
+        <ul>
+          <li>Old method: Find all tags, then filter those we like</li>
+          <li>New method: use Selectors API</li>
+          <li>Most libraries use <a
+              href="http://sizzlejs.com">Sizzle</a> to provide selector
+            support for browsers that don't have it</li>
+          <li>Example: counting all slides in this presentation that
+            have some code inside</li>
+        </ul>
+      </div>
+
+      <div class="slide">
+        <h1>No Selectors API</h1>
+        <pre>
+          <code class="run">
+function hasCode(el) {
+  if (el.nodeName == 'CODE') return true;
+  var children = el.children;
+  var len = children.length;
+  for (var i = 0; i < len; i++) {
+    if (hasCode(children[i])) return true;
+  }
+}
+
+for (var i = 0; i < 500; i++) {
+  var divs = document.getElementsByTagName('div');
+  var count = 0;
+  for (var n = 0, len = divs.length; n < len; n++) {
+    var div = divs[n];
+    if (div.className.indexOf('slide') != -1 && hasCode(div)) {
+      count += 1;
+    }
+  }
+}
+          </code>
+        </pre>
+      </div>
+
+      <div class="slide">
+        <h1>With Selectors API</h1>
+        <h2>(counting still stupid)</h2>
+        <pre>
+          <code class="run">
+for (var i = 0; i < 500; i++) {
+  var divs = document.querySelectorAll('div.slide code');
+  var count = 0;
+  for (var n = 0, len = divs.length; n < len; n++) {
+    count += 1;
+  }
+}
+          </code>
+        </pre>
+      </div>
+
+      <div class="slide">
+        <h1>Reflows and Repaints</h1>
+        <ul>
+          <li>Reflow: recalculation of the page layout
+            <ul>
+              <li>happens every time when the page geometry is measured
+                (e.g. by inspecting <code>.offsetTop</code>)</li>
+              <li>can affect a small area (letter to another letter in
+                fixed-width font), the whole page (vertical scroll-bar is
+                added) or anything in between</li>
+              <li>Thus: avoid mixing DOM changes and measurement!</li>
+            </ul>
+          </li>
+          <li>Repaint: rendering of the areas on the page that were
+            invalidated by the last change
+            <ul>
+              <li>queued up (I will talk about the UI thread queue
+                later)</li>
+            </ul>
+          </li>
+          <li>They are not inseparable:
+            <ul>
+              <li>Reflow without repaint: UI thread is busy, only the
+                last state will be repainted</li>
+              <li>Repaint without reflow: Geometry did not change (e.g.
+                when <code>background-color</code> changes)</li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
+      <div class="slide">
+        <h1>Accidentally flushing the reflow queue</h1>
+        <pre>
+          <code class="run">
+this.append('&lt;div id="reflow_flush"&gt;victim&lt;/div&gt;');
+var element = document.getElementById('reflow_flush');
+var val;
+for (var i = 0; i < 2000; i++) {
+  element.style.color = 'yellow';
+  val = element.offsetWidth;
+  element.style.backgroundColor = 'red';
+  val = element.offsetHeight;
+  element.style.color = 'white';
+  val = element.scrollWidth;
+  element.style.backgroundColor = 'blue';
+  val = element.scrollHeight;
+}
+          </code>
+        </pre>
+      </div>
+
+      <div class="slide">
+        <h1>Out of Sight...</h1>
+        <pre>
+          <code class="run">
+this.append('&lt;div id="reflow_hidden"&gt;victim&lt;/div&gt;');
+var element = document.getElementById('reflow_hidden');
+element.style.display = 'none';
+var val;
+for (var i = 0; i < 2000; i++) {
+  element.style.color = 'yellow';
+  val = element.offsetWidth;
+  element.style.backgroundColor = 'red';
+  val = element.offsetHeight;
+  element.style.color = 'white';
+  val = element.scrollWidth;
+  element.style.backgroundColor = 'blue';
+  val = element.scrollHeight;
+}
+element.style.display = 'block';
+// remind it to repaint
+var col = element.style.color;
+element.style.color = 'white';
+element.style.color = col; </code>
+        </pre>
+      </div>
+
+      <div class="slide">
+        <h1>(Deliberately?) not flushing the reflow queue</h1>
+        <pre>
+          <code class="run">
+this.append('&lt;div id="reflow_no_flush"&gt;victim&lt;/div&gt;');
+var element = document.getElementById('reflow_no_flush');
+var off;
+for (var i = 0; i < 2000; i++) {
+  element.style.color = 'yellow';
+  element.style.backgroundColor = 'red';
+  element.style.color = 'white';
+  element.style.backgroundColor = 'blue';
+  val = element.offsetWidth;
+  val = element.offsetHeight;
+  val = element.scrollWidth;
+  val = element.scrollHeight;
+}
+          </code>
+        </pre>
+      </div>
+
+      <div class="slide">
+        <h1>Changing CSS in batch</h1>
+        <pre>
+          <code class="run">
+this.append('&lt;div id="reflow_css_indiv"&gt;victim&lt;/div&gt;');
+var element = document.getElementById('reflow_css_indiv');
+var off;
+for (i = 0; i < 2000; i++) {
+  element.style.cssText = 'color: yellow; background-color: red';
+  element.style.cssText = 'color: white; background-color: blue';
+  // to keep the example in line with the last one
+  val = element.offsetWidth;
+  val = element.offsetHeight;
+  val = element.scrollWidth;
+  val = element.scrollHeight;
+}
+          </code>
+        </pre>
+      </div>
+
+      <div class="slide">
+        <h1>Who would accidentally flush the reflow queue?!?</h1>
+        <ul>
+          <li>Most people.</li>
+          <li>Commonly done in naive animation:
+            <pre>
+              <code>
+// for dx, dy in [-1, 0, 1]
+el.style.left = dx + el.offsetLeft + 'px';
+el.style.top = dy + el.offsetTop + 'px';
+              </code>
+            </pre>
+          </li>
+          <li>Better way: cache the position!</li>
+        </ul>
+      </div>
+
+      <div class="slide">
+        <h1>It's not just for CSS</h1>
+        <ul>
+          <li>These techniques can also be used for other changes
+            (content, structure...)</li>
+          <li>Three ways to make changes off-document:
+            <ul>
+              <li>Hide, change, show (<code>.style.display</code>)</li>
+              <li>Use document fragment
+                (<code>document.createDocumentFragment</code>)</li>
+              <li>Copy to off-document node, modify, replace
+                (<code>.cloneNode</code>,
+                <code>.replaceChild</code>)</li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
+      <div class="slide">
+        <h1>Miscellaneous IE warning about <code>:hover</code></h1>
+        <ul>
+          <li>Since version 7, IE can apply <code>:hover</code> to any
+            element</li>
+          <li>But if there's a lot of them, IE gets sluggish</li>
+          <li>Don't use <code>:hover</code> for e.g. big tables.
+            <ul>
+              <li class="notimportant">Better yet, don't use IE for big tables. Or... at all.</li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
+      <div class="slide">
+        <h1>Events</h1>
+        <ul>
+          <li>If there's large number of interactive elements, don't
+            give each an event handler</li>
+          <li>Wastes time to attach handlers, wastes memory to remember
+            them all</li>
+          <li>Give it to an ancestor instead, and use <code>this</code>
+            or event's <code>.target</code> to see who raised it</li>
+          <li>Be sure to <code>.preventDefault</code> and
+            <code>.stopPropagation</code> (or set
+            <code>.cancelBubble</code> to <code>true</code> and
+            <code>.returnValue</code> to <code>false</code>, for IE).
+        </ul>
+      </div>
+
+      <!-- --------------------------------------------------------- -->
+      <div class="slide chapter">
+        <h1>Algorithms and Flow Control</h1>
+        <h2>or how even statements have secrets</h2>
+        <ul>
+          <li>Many of us take flow control for granted</li>
+          <li>But it can matter</li>
+        </ul>
+      </div>
+
+      <div class="slide">
+        <h1>Loops</h1>
+        <h2>Not all loops are created equal</h2>
+        <ul>
+          <li><code>for</code> loop
+            <ul>
+              <li>Same.</li>
+            </ul>
+          </li>
+          <li><code>while</code> loop
+            <ul>
+              <li>Same.</li>
+            </ul>
+          </li>
+          <li><code>do while</code> loop
+            <ul>
+              <li>Same.</li>
+            </ul>
+          </li>
+          <li><code>for in</code> loop
+            <ul>
+              <li>S...low.</li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
+      <div class="slide">
+        <h1>Looping over object properties</h1>
+        <pre>
+          <code class="run">
+var obj = {};
+var last = 'z'.charCodeAt(0);
+for (var i = 'a'.charCodeAt(0); i <= last; i++) {
+  var letter = String.fromCharCode(i);
+  obj[letter] = 1;
+}
+var count = 0;
+for (var i = 0; i < 100000; i++) {
+  // for in loop of length 26
+  for (var key in obj) {
+    count += obj[key];
+  }
+}
+          </code>
+        </pre>
+      </div>
+
+      <div class="slide">
+        <h1>Looping over key array</h1>
+        <pre>
+          <code class="run">
+var obj = {};
+var last = 'z'.charCodeAt(0);
+for (var i = 'a'.charCodeAt(0); i <= last; i++) {
+  var letter = String.fromCharCode(i);
+  obj[letter] = 1;
+}
+var keys = [];
+for (var key in obj) {
+  keys.push(key);
+}
+var count = 0;
+var len = keys.length;
+for (var i = 0; i < 100000; i++) {
+  // for loop of length 26
+  for (var k = 0; k < len; k++) {
+    count += obj[keys[k]];
+  }
+}
+          </code>
+        </pre>
+      </div>
+
+      <!-- --------------------------------------------------------- -->
+      <div class="slide chapter">
+        <h1>Strings and Regular Expressions</h1>
+        <h2>or why pattern matching is not really magic</h2>
+      </div>
+
+      <!-- --------------------------------------------------------- -->
+      <div class="slide chapter">
+        <h1>Responsive Interfaces</h1>
+        <h2>or how not to block your page... again and again</h2>
+      </div>
+
+      <!-- --------------------------------------------------------- -->
+      <div class="slide chapter">
+        <h1>Ajax</h1>
+        <h2>or how to be a good server communicator</h2>
+      </div>
+
+      <!-- --------------------------------------------------------- -->
+      <div class="slide chapter">
+        <h1>Programming Practices</h1>
+        <h2>or miscellaneous do's and don'ts</h2>
+      </div>
+
+      <!-- --------------------------------------------------------- -->
+      <div class="slide chapter">
+        <h1>Building and Deploying High-Performance JavaScript
+          Applications</h1>
+        <h2>or how not to deliver (as much)</h2>
+      </div>
+
+      <!-- --------------------------------------------------------- -->
+      <div class="slide chapter">
+        <h1>Tools</h1>
+        <h2>or how to see how slow your code really is</h2>
+      </div>
+    </div>
+  </body>
+</html>
