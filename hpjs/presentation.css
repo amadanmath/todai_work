@@ -91,6 +91,16 @@ div.footer {
 code {
 	font-family: monospace;
 	letter-spacing: -1px;
+        outline: none;
+}
+code input {
+        width: 6em;
+        text-align: center;
+        background-color: #ffffdd;
+        border: 1px solid #cccc66;
+	font-family: inherit;
+	font-size: inherit;
+        font-style: italic;
 }
 pre {
 	font-family: monospace;
@@ -103,6 +113,9 @@ pre {
 	pre:focus {
 		outline: 0;
 	}
+        pre.small {
+          height: inherit;
+        }
 div.phone {
 	-webkit-box-shadow: 0 0 30px #c0c0c0;
 	-moz-box-shadow: 0 0 30px #c0c0c0;
@@ -213,6 +226,7 @@ a {
 div.logs {
 	font-family: 'Ubuntu', helvetica, trebuchet ms, serif;
         float: right;
+        text-align: right;
         margin-right: 10px;
         position: relative;
 }

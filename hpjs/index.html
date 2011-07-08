@@ -26,16 +26,35 @@
           this.append($msg);
         }
 
+        var codeToText = function(el) {
+          var text = '';
+          $(el).children().each(function() {
+            var name = this.nodeName;
+            if (name == 'SPAN') {
+              text += this.textContent;
+            } else if (name != 'BR') {
+              text += this.value;
+            }
+          });
+          console.log("code:",text);
+          return text;
+        }
+
         var runClick = function(evt) {
           var $logs = $(this).closest('div.logs');
           var $script = $logs.next();
-          var code = $script.text().replace('&gt;', '>').replace('&lt;', '<');
+          var text = codeToText($script);
+          var code = text.replace('&gt;', '>').replace('&lt;', '<');
           $logs.empty().lap = lap;
           setTimeout(function() {
             var start = +new Date();
             $logs.start = start;
-            new Function(code).call($logs);
-            $logs.lap("Done in ");
+            try {
+              new Function(code).call($logs);
+              $logs.lap("Done in ");
+            } catch(x) {
+              $logs.lap(x + '<br/>in ')
+            }
           }, 25);
         };
         var $logs = $('<div class="logs"><div>Run</div></div>').click(runClick);
@@ -241,7 +260,7 @@ benchmark();
 function benchmark() {
   var x = 2, sum = 0;
   with({ a: null }) {
-    for(var i = 0; i < 1000000; i++) { // 50x fewer iterations!
+    for(var i = 0; i < <input value="1000000"/>; i++) { // 50x fewer iterations!
       sum += x;
     }
   }
@@ -253,6 +272,7 @@ benchmark();
 
       <div class="slide">
         <h1>Augmented scope (<code>catch</code>)</h1>
+        <h2>50x fewer iterations!</h2>
         <pre>
           <code class="run">
 function benchmark() {
@@ -260,7 +280,7 @@ function benchmark() {
   try {
     throw "Error";
   } catch(ex) {
-    for(var i = 0; i < 50000000; i++) {
+    for(var i = 0; i < <input value="1000000"/>; i++) { // 50x fewer iterations!
       sum += x;
     }
   }
@@ -277,7 +297,7 @@ benchmark();
 function benchmark() {
   var sum = 0;
   eval('var x = 3;');
-  for(var i = 0; i < 50000000; i++) {
+  for(var i = 0; i < <input value="50000000"/>; i++) {
     sum += x;
   }
 }
@@ -766,7 +786,7 @@ for (i = 0; i < 2000; i++) {
         <ul>
           <li>Most people.</li>
           <li>Commonly done in naive animation:
-            <pre>
+            <pre class="small">
               <code>
 // for dx, dy in [-1, 0, 1]
 el.style.left = dx + el.offsetLeft + 'px';
@@ -860,6 +880,12 @@ el.style.top = dy + el.offsetTop + 'px';
               <li>S...low.</li>
             </ul>
           </li>
+          <li><code>.forEach</code> loop
+            <ul>
+              <li>Functional, but</li>
+              <li>S...low...er.</li>
+            </ul>
+          </li>
         </ul>
       </div>
 
@@ -910,16 +936,399 @@ for (var i = 0; i < 100000; i++) {
         </pre>
       </div>
 
+      <div class="slide">
+        <h1>Looping over key array, reversed</h1>
+        <pre>
+          <code class="run">
+var obj = {};
+var last = 'z'.charCodeAt(0);
+for (var i = 'a'.charCodeAt(0); i <= last; i++) {
+  var letter = String.fromCharCode(i);
+  obj[letter] = 1;
+}
+var keys = [];
+for (var key in obj) {
+  keys.push(key);
+}
+var count = 0;
+var len = keys.length;
+for (var i = 0; i < 100000; i++) {
+  // reverse while loop of length 26
+  var k = len;
+  while (--k) { // we know there's at least 1; otherwise, check
+    count += obj[keys[k]];
+  }
+}
+          </code>
+        </pre>
+      </div>
+
+      <div class="slide">
+        <h1>Duff's Device</h1>
+        <pre>
+          <code class="run">
+var sum = 0;
+for (var i = 0; i < 100000000; i++) {
+  sum += 1;
+}
+          </code>
+          <code class="run">
+var sum = 0;
+var i = 100000000;
+var m = i & 7;
+var n = (i - m) >> 3;
+while (m--) {
+  sum += 1;
+}
+while (--n) {
+  sum += 1; sum += 1; sum += 1; sum += 1;
+  sum += 1; sum += 1; sum += 1; sum += 1;
+}
+          </code>
+        </pre>
+      </div>
+
+      <div class="slide">
+        <h1><code>.forEach</code> loops</h1>
+        <pre>
+          <code class="run">
+var i = 10000000, a = [], sum = 0;
+while (--i) { a[i] = i; }
+this.lap("Array constructed in ");
+var len = a.length;
+for (i = 0; i < len; i++) {
+  sum += a[i];
+}
+          </code>
+          <code class="run">
+var i = 10000000, a = [], sum = 0;
+while (--i) { a[i] = i; }
+this.lap("Array constructed in ");
+if (!a.forEach) {
+  this.append('&lt;div&gt;Not supported&lt;/div&gt;'); return;
+}
+a.forEach(function(val) { // val, index, array
+  sum += val;
+});
+          </code>
+        </pre>
+      </div>
+
+      <div class="slide">
+        <h1><code>.forEach</code> replacement from a library</h1>
+        <h2>(this presentation uses jQuery)</h2>
+        <pre>
+          <code class="run">
+var i = 10000000, a = [], sum = 0;
+while (--i) { a[i] = i; }
+this.lap("Array constructed in ");
+$.each(a, function(index, val) {
+  sum += val;
+});
+          </code>
+        </pre>
+      </div>
+
+      <div class="slide">
+        <h1>Conditionals</h1>
+        <ul>
+          <li>Close off impossible conditions</li>
+          <li><code>if</code> is slightly slower than
+            <code>switch</code>, but more readable in case of two
+            conditions</li>
+          <li>Always put the most commonly true condition first</li>
+        </ul>
+      </div>
+
+      <div class="slide">
+        <h1>Naive <code>if</code> conditional</h1>
+        <pre>
+          <code class="run">
+var sum = 0;
+for (var i = 0; i < 10000000; i++) {
+  var k = i % 8;
+  if (k == 0) sum += 0;
+  if (k == 1) sum += 1;
+  if (k == 2) sum += 2;
+  if (k == 3) sum += 3;
+  if (k == 4) sum += 4;
+  if (k == 5) sum += 5;
+  if (k == 6) sum += 6;
+  if (k == 7) sum += 7;
+}
+          </code>
+        </pre>
+      </div>
+
+      <div class="slide">
+        <h1><code>if</code> conditional with <code>else</code></h1>
+        <pre>
+          <code class="run">
+var sum = 0;
+for (var i = 0; i < 10000000; i++) {
+  var k = i % 8;
+  if (k == 0) sum += 0;
+  else if (k == 1) sum += 1;
+  else if (k == 2) sum += 2;
+  else if (k == 3) sum += 3;
+  else if (k == 4) sum += 4;
+  else if (k == 5) sum += 5;
+  else if (k == 6) sum += 6;
+  else sum += 7;
+}
+          </code>
+        </pre>
+      </div>
+
+      <div class="slide">
+        <h1><code>switch</code> conditional</h1>
+        <pre>
+          <code class="run">
+var sum = 0;
+for (var i = 0; i < 10000000; i++) {
+  switch (i % 8) {
+    case 0: sum += 0; break;
+    case 1: sum += 1; break;
+    case 2: sum += 2; break;
+    case 3: sum += 3; break;
+    case 4: sum += 4; break;
+    case 5: sum += 5; break;
+    case 6: sum += 6; break;
+    default: sum += 7
+  }
+}
+          </code>
+        </pre>
+      </div>
+
+      <div class="slide">
+        <h1><code>if</code> conditional in a binary tree</h1>
+        <pre>
+          <code class="run">
+var sum = 0;
+for (var i = 0; i < 10000000; i++) {
+  var k = i % 8;
+  if (k < 4)
+    if (k < 2)
+      if (k == 0) sum += 0;
+      else sum += 1;
+    else
+      if (k == 2) sum += 2;
+      else sum += 3;
+  else
+    if (k < 6)
+      if (k == 4) sum += 4;
+      else sum += 5;
+    else
+      if (k == 6) sum += 6;
+      else sum += 7;
+}
+          </code>
+        </pre>
+      </div>
+
+      <div class="slide">
+        <h1>Unbalanced <code>if</code>, rare condition first</h1>
+        <pre>
+          <code class="run">
+var sum = 0;
+for (var i = 0; i < 100000000; i++) {
+  var k = i % 8;
+  if (k >= 6 && k < 7) sum += 3;
+  else if (k >= 0 && k < 6) sum += 1;
+  // actually this last if is not needed, here for balance
+}
+          </code>
+        </pre>
+      </div>
+
+      <div class="slide">
+        <h1>Unbalanced <code>if</code>, common condition first</h1>
+        <pre>
+          <code class="run">
+var sum = 0;
+for (var i = 0; i < 100000000; i++) {
+  var k = i % 8;
+  if (k >= 0 && k < 6) sum += 1;
+  else if (k >= 6 && k < 7) sum += 3;
+  // actually this last if is not needed, here for balance
+}
+          </code>
+        </pre>
+      </div>
+
+      <div class="slide">
+        <h1>Unbalanced <code>if</code>, fixed the subcondition order</h1>
+        <h2>In a boolean <code>&&</code>/<code>||</code> chain, make it
+          fail as soon as possible</h2>
+        <pre>
+          <code class="run">
+var sum = 0;
+for (var i = 0; i < 100000000; i++) {
+  var k = i % 8;
+  if (k < 6 && k >= 0) sum += 1;
+  else if (k >= 6 && k < 7) sum += 3;
+  // actually this last if is not needed, here for balance
+}
+          </code>
+        </pre>
+      </div>
+
+      <div class="slide">
+        <h1>Using a lookup table instead</h1>
+        <pre>
+          <code class="run">
+var sum = 0;
+var lookup = [0, 1, 2, 3, 4, 5, 6, 7];
+for (var i = 0; i < 100000000; i++) {
+  var k = i % 8;
+  sum += lookup[k];
+}
+          </code>
+        </pre>
+      </div>
+
+      <div class="slide">
+        <h1>Dangers of recursion</h1>
+        <h2>Remember, all recursion can be rewritten as iteration</h2>
+        <pre>
+          <code class="run">
+// Overcalculation
+function fib(x) {
+  if (x < 2) return 1;
+  else return fib(x - 1) + fib(x - 2);
+}
+fib(<input value="35"/>);
+          </code>
+          <code class="run">
+// Stack overflow
+var fib_memo = [];
+function fib(x) {
+  if (fib_memo[x]) return fib_memo[x];
+  if (x < 2) return 1;
+  return fib_memo[x] = fib(x - 1) + fib(x - 2);
+}
+fib(<input value="35000"/>);
+          </code>
+        </pre>
+      </div>
+
       <!-- --------------------------------------------------------- -->
       <div class="slide chapter">
         <h1>Strings and Regular Expressions</h1>
         <h2>or why pattern matching is not really magic</h2>
+        <ul>
+          <li>String operations are very common</li>
+          <li>Especially:
+            <ul>
+              <li>String concatenation</li>
+              <li>String search (and replace)</li>
+            </ul>
+          </li>
+        </ul>
       </div>
+
+      <div class="slide">
+        <h1>String concatenation</h1>
+        <ul>
+          <li>Using <code>+</code> and <code>+=</code> operators (slow
+            in older IE)</li>
+          <li>Using <code>.join</code> (slightly faster in non-IE modern
+            browsers)</li>
+        </ul>
+      </div>
+
+      <div class="slide">
+        <h1>Concatenation by operators</h1>
+        <pre>
+          <code class="run">
+var str = '';
+for (var i = 0; i < 1000000; i++) {
+  str += '&lt;li data-i="' + i + '"&gt;' + i + '&lt;/li&gt;';
+}
+          </code>
+          <code class="run">
+// some say that this is faster
+var str = '';
+for (var i = 0; i < 1000000; i++) {
+  str += '&lt;li data-i="';
+  str += i;
+  str += '"&gt;';
+  str += i;
+  str += '&lt;/li&gt;';
+}
+str.toString(); // force IE8's optimisation to evaluate now
+          </code>
+        </pre>
+      </div>
+
+      <div class="slide">
+        <h1>Concatenation by <code>.join</code></code></h1>
+        <h2>Slightly slower in modern browsers, much faster in IE7 and
+          below</h2>
+        <pre>
+          <code class="run">
+var lis = [];
+for (var i = 0; i < <input value="1000000"/>; i++) {
+  lis.push('&lt;li data-i="' + i + '"&gt;' + i + '&lt;/li&gt;');
+}
+var str = lis.join('');
+          </code>
+          <code class="run">
+var lis = [];
+for (var i = 0; i < <input value="1000000"/>; i++) {
+  lis.push('&lt;li data-i="' + i + '"&gt;' + i + '&lt;/li&gt;');
+}
+var str = String.prototype.concat.apply('', lis);
+          </code>
+        </pre>
+      </div>
+
+      <div class="slide">
+        <h1>Regular Expressions</h1>
+        <ul>
+          <li>Mostly not specific to JavaScript, so I won't go into detail</li>
+          <li>Careful about runaway backtracking</li>
+          <li>Don't make patterns that can be matched ambiguously
+            <ul>
+              <li>(quantified patterns and following tokens should be mutually exclusive)</li>
+            </ul>
+          </li>
+          <li>Be as specific as possible</li>
+          <li>Try to discriminate before branching</li>
+          <li>Start regexps with simple tokens</li>
+          <li>Know when not to use regexps, and when to use several</li>
+        </ul>
+      </div>
+
 
       <!-- --------------------------------------------------------- -->
       <div class="slide chapter">
         <h1>Responsive Interfaces</h1>
         <h2>or how not to block your page... again and again</h2>
+        <ul>
+          <li>Browser UI thread
+            <ul>
+              <li>Updates the user interface (reflows, repaints)</li>
+              <li>Executes the scripts</li>
+            </ul>
+          </li>
+          <li>JavaScript does not have multitasking!
+            <ul>
+              <li>This is actually a lie. It doesn't unless you
+                force it to, using the new Web Workers API, and Workers
+                are severely limited in what they can do. In particular,
+                they can't touch UI</li>
+            </ul>
+          </li>
+          <li>Consequence: if a script runs, the browser freezes.
+            <ul>
+              <li>Research confirms that an application should always
+                respond in maximum 100ms, or it feels sluggish</li>
+              <li>The browser will kill a script that runs too long</li>
+            </ul>
+          </li>
+        </ul>
       </div>
 
       <!-- --------------------------------------------------------- -->
