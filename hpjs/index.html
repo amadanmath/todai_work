@@ -36,7 +36,6 @@
               text += this.value;
             }
           });
-          console.log("code:",text);
           return text;
         }
 
@@ -57,8 +56,13 @@
             }
           }, 25);
         };
+
         var $logs = $('<div class="logs"><div>Run</div></div>').click(runClick);
         $('.run').before($logs);
+
+        $('.clicky').click(function() {
+          this.value++;
+        });
       });
     </script>       
   </head>
@@ -992,7 +996,7 @@ while (--n) {
         <h1><code>.forEach</code> loops</h1>
         <pre>
           <code class="run">
-var i = 10000000, a = [], sum = 0;
+var i = <input value="1000000"/>, a = [], sum = 0;
 while (--i) { a[i] = i; }
 this.lap("Array constructed in ");
 var len = a.length;
@@ -1001,7 +1005,7 @@ for (i = 0; i < len; i++) {
 }
           </code>
           <code class="run">
-var i = 10000000, a = [], sum = 0;
+var i = <input value="1000000"/>, a = [], sum = 0;
 while (--i) { a[i] = i; }
 this.lap("Array constructed in ");
 if (!a.forEach) {
@@ -1019,7 +1023,7 @@ a.forEach(function(val) { // val, index, array
         <h2>(this presentation uses jQuery)</h2>
         <pre>
           <code class="run">
-var i = 10000000, a = [], sum = 0;
+var i = <input value="1000000"/>, a = [], sum = 0;
 while (--i) { a[i] = i; }
 this.lap("Array constructed in ");
 $.each(a, function(index, val) {
@@ -1045,7 +1049,7 @@ $.each(a, function(index, val) {
         <pre>
           <code class="run">
 var sum = 0;
-for (var i = 0; i < 10000000; i++) {
+for (var i = 0; i < <input value="100000000"/>; i++) {
   var k = i % 8;
   if (k == 0) sum += 0;
   if (k == 1) sum += 1;
@@ -1065,7 +1069,7 @@ for (var i = 0; i < 10000000; i++) {
         <pre>
           <code class="run">
 var sum = 0;
-for (var i = 0; i < 10000000; i++) {
+for (var i = 0; i < <input value="100000000"/>; i++) {
   var k = i % 8;
   if (k == 0) sum += 0;
   else if (k == 1) sum += 1;
@@ -1085,7 +1089,7 @@ for (var i = 0; i < 10000000; i++) {
         <pre>
           <code class="run">
 var sum = 0;
-for (var i = 0; i < 10000000; i++) {
+for (var i = 0; i < <input value="100000000"/>; i++) {
   switch (i % 8) {
     case 0: sum += 0; break;
     case 1: sum += 1; break;
@@ -1106,7 +1110,7 @@ for (var i = 0; i < 10000000; i++) {
         <pre>
           <code class="run">
 var sum = 0;
-for (var i = 0; i < 10000000; i++) {
+for (var i = 0; i < <input value="100000000"/>; i++) {
   var k = i % 8;
   if (k < 4)
     if (k < 2)
@@ -1132,7 +1136,7 @@ for (var i = 0; i < 10000000; i++) {
         <pre>
           <code class="run">
 var sum = 0;
-for (var i = 0; i < 100000000; i++) {
+for (var i = 0; i < <input value="100000000"/>; i++) {
   var k = i % 8;
   if (k >= 6 && k < 7) sum += 3;
   else if (k >= 0 && k < 6) sum += 1;
@@ -1147,7 +1151,7 @@ for (var i = 0; i < 100000000; i++) {
         <pre>
           <code class="run">
 var sum = 0;
-for (var i = 0; i < 100000000; i++) {
+for (var i = 0; i < <input value="100000000"/>; i++) {
   var k = i % 8;
   if (k >= 0 && k < 6) sum += 1;
   else if (k >= 6 && k < 7) sum += 3;
@@ -1164,7 +1168,7 @@ for (var i = 0; i < 100000000; i++) {
         <pre>
           <code class="run">
 var sum = 0;
-for (var i = 0; i < 100000000; i++) {
+for (var i = 0; i < <input value="100000000"/>; i++) {
   var k = i % 8;
   if (k < 6 && k >= 0) sum += 1;
   else if (k >= 6 && k < 7) sum += 3;
@@ -1180,7 +1184,7 @@ for (var i = 0; i < 100000000; i++) {
           <code class="run">
 var sum = 0;
 var lookup = [0, 1, 2, 3, 4, 5, 6, 7];
-for (var i = 0; i < 100000000; i++) {
+for (var i = 0; i < <input value="100000000"/>; i++) {
   var k = i % 8;
   sum += lookup[k];
 }
@@ -1326,6 +1330,74 @@ var str = String.prototype.concat.apply('', lis);
               <li>Research confirms that an application should always
                 respond in maximum 100ms, or it feels sluggish</li>
               <li>The browser will kill a script that runs too long</li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
+      <div class="slide">
+        <h1>Long calculation in UI Thread</h1>
+        <h2>Watch what happens with the button:
+          <input type="button" class="clicky" value="0"/></h2>
+        <pre>
+          <code class="run">
+function fib(n) {
+  if (n < 2) return 1;
+  return fib(n - 1) + fib(n - 2);
+}
+var result = fib(<input value="35"/>);
+this.lap(result + ' calculated ');
+          </code>
+        </pre>
+      </div>
+
+      <div class="slide">
+        <h1>Long calculation in Web Worker</h1>
+        <h2>The same kind of a button:
+          <input type="button" class="clicky" value="0"/></h2>
+        <pre>
+          <code>
+// in "fib.js"
+function fib(n) {
+  if (n < 2) return 1;
+  return fib(n - 1) + fib(n - 2);
+}
+self.onmessage = function(evt) {
+  self.postMessage('' + fib(parseInt(evt.data, 10)));
+};
+          </code>
+          <code class="run">
+// here
+var worker = new Worker("fib.js");
+worker.postMessage("<input value="35"/>");
+var that = this;
+worker.onmessage = function(evt) {
+  var result = evt.data;
+  that.lap(result + ' calculated ');
+}; </code>
+        </pre>
+      </div>
+
+      <div class="slide">
+        <h1>Web Worker Disadvantages</h1>
+        <h2>or why they aren't called threads</h2>
+        <ul>
+          <li>One word: Security.</li>
+          <li>Web Workers have access to
+            <ul>
+              <li>browser identification (<code>navigator</code>)</li>
+              <li>current URL (read-only <code>location</code>)</li>
+              <li>worker itself (<code>self</code>)</li>
+              <li><code>importScripts</code> function to load more code</li>
+              <li>ECMAScript objects</li>
+              <li><code>XMLHttpRequest</code> constructor</li>
+              <li><code>setTimeout</code>, <code>setInterval</code></li>
+              <li><code>close</code> which shuts down the Web Worker</li>
+            </ul>
+          </li>
+          <li>Only string messages work cross-browser
+            <ul>
+              <li>But that's what JSON is for</li>
             </ul>
           </li>
         </ul>
