@@ -1,0 +1,30 @@
+\documentclass{article}
+\usepackage{amsmath, amssymb, graphicx}
+
+\begin{document}
+
+\title{Basic Lectures on Emerging Design and Informatics III\\
+Report 4}
+
+\author{Goran Topi\'{c}, 49-106312}
+\maketitle
+
+The original differential function:
+\begin{align}
+  \frac{dy}{dx} &= \frac{1 + y^2}{1 + y^2} \\
+  \frac{dy}{1 + x^2} &= \frac{dx}{1 + y^2} \\
+  \int\frac{dy}{1 + x^2} &= \int\frac{dx}{1 + y^2} \\
+  \arctan x + C &= \arctan y \\
+  y &= \tan(\arctan x + C)
+\end{align}
+
+Using the starting values, we can find the concrete solution. We can ignore the cyclic nature of $tan$, as it does not impact the solution in any way.
+\begin{align}
+  x0 &= 0 \\
+  y0 &= 2 \\
+  \arctan 0 + C &= \arctan 2 \\
+  C &= \arctan 2 \\
+  y &= \tan(\arctan x + \arctan 2)
+\end{align}
+
+\end{document}

@@ -60,8 +60,8 @@ Gnuplot.open do |gp|
     plot.key 'bottom right'
     plot.size 'ratio 1'
     plot.logscale 'xy'
-    plot.terminal 'epslatex'
-    plot.output '4plot.eps'
+    plot.terminal 'pdf'
+    plot.output '4plot.pdf'
 
     euler_error = []
     runge_kutta_error = []
