@@ -28,7 +28,7 @@ class Approximator
   end
 end
 
-class EulerDifferential < Approximator
+class Euler < Approximator
   def next
     return @y0 = @y unless @y0
     @y += @h * @f.call(@x, @y)
@@ -37,7 +37,7 @@ class EulerDifferential < Approximator
   end
 end
 
-class RungeKuttaDifferential < Approximator
+class RungeKutta < Approximator
   def next
     return @y0 = @y unless @y0
     k1 = @h * @f.call(@x, @y)
@@ -60,8 +60,6 @@ Gnuplot.open do |gp|
     plot.key 'bottom right'
     plot.size 'ratio 1'
     plot.logscale 'xy'
-    plot.terminal 'pdf'
-    plot.output '4plot.pdf'
 
     euler_error = []
     runge_kutta_error = []
@@ -70,8 +68,8 @@ Gnuplot.open do |gp|
     (1..3).step(0.1) do |exponent|
       h = 10 ** (-exponent)
 
-      euler = EulerDifferential.new(X0, Y0, h) { |x, y| f(x, y) }
-      runge_kutta = RungeKuttaDifferential.new(X0, Y0, h) { |x, y| f(x, y) }
+      euler = Euler.new(X0, Y0, h) { |x, y| f(x, y) }
+      runge_kutta = RungeKutta.new(X0, Y0, h) { |x, y| f(x, y) }
 
       # written for clarity as two loops, but
       # one could be used, since the two progress at the same speed
