@@ -18,13 +18,22 @@ The original differential function:
   y &= \tan(\arctan x + C)
 \end{align}
 
-Using the starting values, we can find the concrete solution. We can ignore the cyclic nature of $tan$, as it does not impact the solution in any way.
+Using the starting values, we can find the concrete solution. We can
+ignore the cyclic nature of $tan$, as it does not impact the solution in
+any way.
 \begin{align}
-  x0 &= 0 \\
-  y0 &= 2 \\
+  x_0 &= 0 \\
+  y_0 &= 2 \\
   \arctan 0 + C &= \arctan 2 \\
   C &= \arctan 2 \\
   y &= \tan(\arctan x + \arctan 2)
 \end{align}
+
+Since the function is discontinuous and has a pole at $x = 0.5$, this
+report approximates the function at $\max x_n, x_n \leqslant 0.4$. The
+errors at the high end of $h$ occur because $x_n$ is more likely to end
+up further from $0.4$ (as $0.4$ is not cleanly divisible by most of the
+values of $h$), and the error consequently ends up being measured on a
+smaller interval.
 
 \end{document}

@@ -7,7 +7,6 @@ require 'gnuplot'
 X0 = 0.0
 XN = 0.4
 Y0 = 2.0
-N = 100
 
 # the differential equation definition
 # f(x, y) = dy / dx
@@ -71,12 +70,9 @@ Gnuplot.open do |gp|
       euler = Euler.new(X0, Y0, h) { |x, y| f(x, y) }
       runge_kutta = RungeKutta.new(X0, Y0, h) { |x, y| f(x, y) }
 
-      # written for clarity as two loops, but
-      # one could be used, since the two progress at the same speed
-      while runge_kutta.x < XN
+      # the x progresses at the same speed, so we can use the same loop
+      while euler.x + h <= XN
         runge_kutta.next
-      end
-      while euler.x < XN
         euler.next
       end
 
