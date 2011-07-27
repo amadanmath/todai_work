@@ -1,0 +1,93 @@
+\documentclass{article}
+\usepackage{amsmath, amssymb, graphicx}
+
+\begin{document}
+
+\title{Basic Lectures on Emerging Design and Informatics III\\
+Report 5}
+
+\author{Goran Topi\'{c}, 49-106312}
+\maketitle
+
+Steady 1-dimensional advection-diffusion equation $T(x)$:
+\begin{align}
+  u\frac{dT}{dx} = \frac{1}{Pe}\frac{d^2 T}{dx^2}
+\end{align}
+
+Given $u=1.0$,
+\begin{align}
+  \frac{dT}{dx} = \frac{1}{Pe}\frac{d^2 T}{dx^2}
+\end{align}
+
+The domain of $x$ is $[0.0, 1.0]$, and additionally these conditions are given:
+\begin{align}
+  \label{cond1} T(0.0) &= 1.0 \\
+  \label{cond2} T(1.0) &= 0.0
+\end{align}
+
+Task 1: Analytic solution of the differential equation
+
+Since this is a homogenous differential equation with constant coefficients, we can be certain that $T$ will have the form of $T(x) = e^{rx}$. If we make the substitution:
+\begin{align}
+  \frac{d(e^{rx})}{dx} &= re^{rx} \\
+  \frac{d(e^{rx})}{dx} &= r^2 e^{rx}
+\end{align}
+\begin{align}
+  re^{rx} &= \frac{1}{Pe} r^2 e^{rx} \\
+  re^{rx} - \frac{1}{Pe} r^2 e^{rx} &= 0 \\
+  e^{rx} r (1 - \frac{1}{Pe} r) &= 0
+\end{align}
+
+Since an exponential function never has roots,
+\begin{align}
+  r (1 - \frac{1}{Pe} r) &= 0
+\end{align}
+
+Thus, there are two solutions for r:
+\begin{align}
+  r_1 &= 0 \\
+  1 - \frac{1}{Pe} r_2 &= 0 \\
+  r_2 &= Pe
+\end{align}
+
+and consequently we can see two possible solutions of the differential equation:
+\begin{align}
+  T_1(x) &= e^{r_1 x} = 1 \\
+  T_2(x) &= e^{r_2 x} = e^{Pe x}
+\end{align}
+
+Since all solutions of a second-order homogeneous differential equation can be expressed as a linear combination of two particular, linearly independent solutions, and $T_1$ and $T_2$ are linearly independent, we can get a general solution in the following way:
+\begin{align}
+  T(x) &= a T_1(x) + b T_2(x) \\
+       &= a + b e^{Pe x}
+\end{align}
+
+Using the conditions from \eqref{cond1} and \eqref{cond2}, we get the following equation system:
+\begin{align}
+  1.0 &= a + b e^{0.0 Pe} \\
+  0.0 &= a + b e^{1.0 Pe}
+\end{align}
+
+i.e.
+\begin{align}
+  1 &= a + b \\
+  0 &= a + b e^{Pe} \\
+  1 &= b - b e^{Pe} \\
+    &= b (1 - e^{Pe}) \\
+  b &= \frac{1}{1 - e^{Pe}} \\
+  a &= 1 - b \\
+    &= 1 - \frac{1}{1 - e^{Pe}}
+\end{align}
+
+Thus,
+\begin{align}
+  T(x) &= 1 - \frac{1}{1 - e^{Pe}} + \frac{1}{1 - e^{Pe}} e^{Pe x} \\
+       &= \frac{1}{1 - e^{Pe}}((1 - e^{Pe}) - 1 + e^{Pe x})
+\end{align}
+
+and we finally obtain
+\begin{align}
+  T(x) &= \frac{e^{Pe x} - e^{Pe}}{1 - e^{Pe}}
+\end{align}
+
+\end{document}
