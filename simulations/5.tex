@@ -90,17 +90,30 @@ and we finally obtain
   T(x) &= \frac{e^{Pe~x} - e^{Pe}}{1 - e^{Pe}}
 \end{align}
 
-Task 2-1: Discretisation of the differential equation using central difference method
+Task 2-1: Discretisation of the differential equation using the central difference method
 
 \begin{align}
   \frac{dT}{dx} &= \frac{1}{Pe}\frac{d^2 T}{dx^2} \\
   \frac{T_{i + 1} - T_{i - 1}}{2 \Delta x} &= \frac{1}{Pe} \frac{T_{i + 1} - 2 T_i + T_{i - 1}}{(\Delta x)^2}
 \end{align}
 
-We can see that the next value $T_{i + 1}$ depends on the previous two values ($T_i$, $T_{i - 1}$), yet only $T_0$ and $T_N$ are given. Thus, we will convert the equation into a form we can use in Gauss-Seidel algorithm:
+We can see that the next value $T_{i + 1}$ depends on the previous two values ($T_i$, $T_{i - 1}$), yet only $T_0$ and $T_N$ are given. Thus, we will convert the equation into a form we can use in Gauss-Seidel algorithm, using the central difference method:
 \begin{align}
   \frac{dT}{dx} &= \frac{1}{Pe}\frac{d^2 T}{dx^2} \\
   \frac{T_{i + 1} - T_{i - 1}}{2 \Delta x} &= \frac{1}{Pe} \frac{T_{i + 1} - 2 T_i + T_{i - 1}}{(\Delta x)^2}
 \end{align}
+\begin{align}
+  T_{i - 1}(\frac{1}{Pe} \frac{1}{(\Delta x)^2} + \frac{1}{2 \Delta x}) - T_i \frac{1}{Pe} \frac{2}{(\Delta x)^2} + T_{i + 1}(\frac{1}{Pe} \frac{1}{(\Delta x)^2} - \frac{1}{2 \Delta x}) &= 0
+\end{align}
+
+Task 3-1: Discretisation of the differential equation using the forward difference method for the first-order differential, and the central difference method for the second-order differential
+
+\begin{align}
+  \frac{T_{i + 1} - T_{i}}{\Delta x} &= \frac{1}{Pe} \frac{T_{i + 1} - 2 T_i + T_{i - 1}}{(\Delta x)^2}
+\end{align}
+\begin{align}
+  T_{i - 1}(\frac{1}{Pe} \frac{1}{(\Delta x)^2} + \frac{1}{2 \Delta x}) - T_i \frac{1}{Pe} \frac{2}{(\Delta x)^2} + T_{i + 1}(\frac{1}{Pe} \frac{1}{(\Delta x)^2} - \frac{1}{2 \Delta x}) &= 0
+\end{align}
+
 
 \end{document}
